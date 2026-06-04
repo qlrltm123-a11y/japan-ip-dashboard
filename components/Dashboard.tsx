@@ -221,12 +221,14 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
     return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 20).map(([kw, count]) => ({ kw, count }))
   }, [fp])
 
-  // 댓글 있는 게시물 (firstComment 비어있지 않은 것)
+  // 댓글 있는 게시물 — 채널 필터 무관하게 IG 전체에서 가져옴
   const postsWithComments = useMemo(() =>
-    fp.filter(p => p.firstComment && p.firstComment.trim().length > 3)
+    posts
+      .filter(p => selectedCampaign === "전체" || p.ipName === selectedCampaign)
+      .filter(p => p.firstComment && p.firstComment.trim().length > 3)
       .sort((a, b) => b.likes - a.likes)
       .slice(0, 30),
-  [fp])
+  [posts, selectedCampaign])
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview",  label: "개요" },
@@ -737,9 +739,12 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
 
             {/* 댓글 미리보기 카드 */}
             <Card>
-              <SectionTitle>실제 댓글 반응 미리보기 ({postsWithComments.length}건)</SectionTitle>
+              <div className="flex items-center justify-between mb-4">
+                <SectionTitle>실제 댓글 반응 미리보기 ({postsWithComments.length}건)</SectionTitle>
+                <span className="text-[10px] text-[#444] bg-[#1e1e28] px-2 py-1 rounded-lg">📸 Instagram 전체 기준</span>
+              </div>
               {postsWithComments.length === 0 ? (
-                <p className="text-[#444] text-sm">댓글 데이터가 없습니다. Instagram 시트에 firstComment 컬럼을 확인하세요.</p>
+                <p className="text-[#444] text-sm">댓글 데이터가 없습니다.<br/>Instagram Apify 액터에서 <code className="text-[#6366f1]">firstComment</code> 필드가 수집되고 있는지 확인하세요.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
                   {postsWithComments.map((p, i) => (

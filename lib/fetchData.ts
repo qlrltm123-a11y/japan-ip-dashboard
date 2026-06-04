@@ -65,25 +65,31 @@ export function analyzeSentiment(text: string): { sentiment: Post["sentiment"]; 
 }
 
 // ── 캠페인 감지 규칙 ──────────────────────────────────────────────────────────
-export const CAMPAIGN_RULES: { name: string; keywords: string[] }[] = [
+// ── 캠페인 감지 규칙 ──────────────────────────────────────────────────────────
+// required: 하나 이상 반드시 포함 / optional: 하나라도 있으면 추가 점수 (미래 확장용)
+export const CAMPAIGN_RULES: { name: string; required: string[]; boost?: string[] }[] = [
   {
     name: "ウェイクメイク_平成ギャルエディション",
-    keywords: ["ウェイクメイク", "웨이크메이크", "平成ギャル", "헤이세이갸루", "wakemake"],
+    // 반드시 브랜드명이 있어야 함 — 平成ギャル 단독은 오탐이므로 제외
+    required: ["ウェイクメイク", "웨이크메이크", "wakemake", "ウェイクメイクギャル"],
+    boost: ["平成ギャル", "ギャルエディション"],
   },
   {
     name: "カラーグラム_ギャルしんちゃんコレクション",
-    keywords: ["カラーグラム", "컬러그램", "ギャルしんちゃん", "갸루신짱", "colorgram", "しんちゃん"],
+    // しんちゃん 단독은 오탐 가능 → カラーグラム 계열 브랜드명 필수
+    required: ["カラーグラム", "컬러그램", "colorgram"],
+    boost: ["ギャルしんちゃん", "しんちゃん", "갸루신짱"],
   },
-  // ↓ 새 캠페인 추가 시 여기에만 추가
-  // { name: "캠페인명", keywords: ["키워드1", "키워드2"] },
+  // ↓ 새 캠페인 추가 예시
+  // { name: "캠페인명", required: ["브랜드명"], boost: ["부가키워드"] },
 ]
 
 function detectIP(caption: string, hashtags: string[]): string {
   const text = (caption + " " + hashtags.join(" ")).toLowerCase()
   for (const rule of CAMPAIGN_RULES) {
-    for (const kw of rule.keywords) {
-      if (text.includes(kw.toLowerCase())) return rule.name
-    }
+    // required 중 하나라도 있으면 해당 캠페인으로 분류
+    const hit = rule.required.some(kw => text.includes(kw.toLowerCase()))
+    if (hit) return rule.name
   }
   const commonKws = ["コラボ", "collab", "collaboration", "콜라보"]
   for (const kw of commonKws) {
