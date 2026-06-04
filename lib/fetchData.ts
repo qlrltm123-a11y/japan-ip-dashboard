@@ -6,20 +6,17 @@ const CSV_URL =
 export interface Post {
   date: string
   owner: string
+  ownerFullName: string
   caption: string
   hashtags: string[]
-  likes: number
   comments: number
-  plays: number
-  impressions: number
-  reach: number
   reactions: number
+  impressions: number
   engagementRate: number
-  isVideo: boolean
-  isPaid: boolean
-  url: string
   contentType: string
   ipName: string
+  url: string
+  displayUrl: string
 }
 
 const HASHTAG_IP_MAP: Record<string, string> = {
@@ -27,6 +24,7 @@ const HASHTAG_IP_MAP: Record<string, string> = {
   IPコラボ: "콜라보_공통",
   キャラコラボ: "콜라보_공통",
   コラボグッズ: "콜라보_공통",
+  コラボ: "콜라보_공통",
 }
 
 function toNum(v: unknown): number {
@@ -34,15 +32,19 @@ function toNum(v: unknown): number {
   return isNaN(n) ? 0 : n
 }
 
-function extractHashtags(caption: string): string[] {
-  return (caption.match(/#[\w　-鿿가-힣]+/g) ?? []).slice(0, 8)
-}
-
-function detectIP(caption: string): string {
+function detectIP(caption: string, hashtags: string[]): string {
+  const text = caption + " " + hashtags.join(" ")
   for (const [tag, ip] of Object.entries(HASHTAG_IP_MAP)) {
-    if (caption.includes(tag)) return ip
+    if (text.includes(tag)) return ip
   }
   return "기타"
+}
+
+function contentTypeLabel(type: string): string {
+  const t = (type ?? "").toLowerCase()
+  if (t === "video") return "영상"
+  if (t === "sidecar") return "캐러셀"
+  return "이미지"
 }
 
 export async function fetchPosts(): Promise<Post[]> {
@@ -54,34 +56,39 @@ export async function fetchPosts(): Promise<Post[]> {
     skipEmptyLines: true,
   })
 
-  return data.map((row) => {
-    const likes = toNum(row["likeCount"])
-    const comments = toNum(row["commentCount"])
-    const plays = toNum(row["video/playCount"])
-    const isVideo = String(row["isVideo"]).toLowerCase() === "true"
-    const impressions = plays > 0 ? plays : likes * 20
-    const reach = Math.round(impressions * 0.7)
-    const reactions = likes + comments
-    const engagementRate = impressions > 0 ? (reactions / impressions) * 100 : 0
-    const caption = row["caption"] ?? ""
+  return data
+    .map((row) => {
+      const caption = row["caption"] ?? ""
+      const comments = toNum(row["commentsCount"])
 
-    return {
-      date: row["createdAt"]?.split("T")[0] ?? "",
-      owner: row["owner/username"] ?? "",
-      caption,
-      hashtags: extractHashtags(caption),
-      likes,
-      comments,
-      plays,
-      impressions,
-      reach,
-      reactions,
-      engagementRate: Math.round(engagementRate * 100) / 100,
-      isVideo,
-      isPaid: String(row["isPaidPartnership"]).toLowerCase() === "true",
-      url: row["url"] ?? "",
-      contentType: isVideo ? "영상/릴스" : "이미지",
-      ipName: detectIP(caption),
-    }
-  }).filter((p) => p.date)
+      // 해시태그: hashtags/0, hashtags/1 ... 컬럼에서 수집
+      const hashtags: string[] = []
+      for (let i = 0; i < 10; i++) {
+        const h = row[`hashtags/${i}`]
+        if (h && h.trim()) hashtags.push(h.trim().startsWith("#") ? h.trim() : `#${h.trim()}`)
+        else break
+      }
+
+      // 노출수 추정: 댓글 × 50 (좋아요 데이터 없음)
+      const impressions = comments > 0 ? comments * 50 : 100
+      const reactions = comments
+      const engagementRate = impressions > 0 ? +((reactions / impressions) * 100).toFixed(2) : 0
+
+      return {
+        date: (row["timestamp"] ?? "").split("T")[0],
+        owner: row["ownerUsername"] ?? "",
+        ownerFullName: row["ownerFullName"] ?? "",
+        caption,
+        hashtags,
+        comments,
+        reactions,
+        impressions,
+        engagementRate,
+        contentType: contentTypeLabel(row["type"] ?? ""),
+        ipName: detectIP(caption, hashtags),
+        url: row["url"] ?? "",
+        displayUrl: row["displayUrl"] ?? "",
+      }
+    })
+    .filter((p) => p.date)
 }
