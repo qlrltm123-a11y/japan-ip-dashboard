@@ -102,37 +102,96 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
   const totalReactions = useMemo(() => fp.reduce((a, p) => a + p.reactions, 0), [fp])
 
   const byType = useMemo(() => {
-    const map: Record<string, { comments: number; count: number }> = {}
+    const map: Record<string, { reactions: number; likes: number; comments: number; count: number }> = {}
     for (const p of fp) {
-      if (!map[p.contentType]) map[p.contentType] = { comments: 0, count: 0 }
+      if (!map[p.contentType]) map[p.contentType] = { reactions: 0, likes: 0, comments: 0, count: 0 }
+      map[p.contentType].reactions += p.reactions
+      map[p.contentType].likes += p.likes
       map[p.contentType].comments += p.comments
       map[p.contentType].count++
     }
     return Object.entries(map)
-      .map(([type, v]) => ({ type, ...v, avg: v.count > 0 ? +(v.comments / v.count).toFixed(1) : 0 }))
-      .sort((a, b) => b.count - a.count)
+      .map(([type, v]) => ({
+        type,
+        ...v,
+        avgReactions: v.count > 0 ? Math.round(v.reactions / v.count) : 0,
+        avgLikes: v.count > 0 ? Math.round(v.likes / v.count) : 0,
+      }))
+      .sort((a, b) => b.avgReactions - a.avgReactions)
   }, [fp])
 
   const byCampaign = useMemo(() => {
-    const map: Record<string, { comments: number; count: number }> = {}
+    const map: Record<string, { reactions: number; likes: number; comments: number; plays: number; count: number }> = {}
     for (const p of fp) {
-      if (!map[p.ipName]) map[p.ipName] = { comments: 0, count: 0 }
+      if (!map[p.ipName]) map[p.ipName] = { reactions: 0, likes: 0, comments: 0, plays: 0, count: 0 }
+      map[p.ipName].reactions += p.reactions
+      map[p.ipName].likes += p.likes
       map[p.ipName].comments += p.comments
+      map[p.ipName].plays += p.plays
       map[p.ipName].count++
     }
     return Object.entries(map)
-      .map(([name, v]) => ({ name: name.split("_").pop() ?? name, fullName: name, ...v }))
+      .map(([name, v]) => ({
+        name: name.split("_").pop() ?? name,
+        fullName: name,
+        ...v,
+        avgReactions: v.count > 0 ? Math.round(v.reactions / v.count) : 0,
+      }))
       .sort((a, b) => b.count - a.count)
   }, [fp])
 
   const byDate = useMemo(() => {
-    const map: Record<string, number> = {}
+    const map: Record<string, { count: number; reactions: number }> = {}
     for (const p of fp) {
-      map[p.date] = (map[p.date] ?? 0) + 1
+      if (!map[p.date]) map[p.date] = { count: 0, reactions: 0 }
+      map[p.date].count++
+      map[p.date].reactions += p.reactions
     }
     return Object.entries(map)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, count]) => ({ date: date.slice(5), count }))
+      .map(([date, v]) => ({ date: date.slice(5), ...v }))
+  }, [fp])
+
+  // 버즈 모멘텀: 최근 7일 vs 이전 7일
+  const momentum = useMemo(() => {
+    const sorted = [...fp].sort((a, b) => b.date.localeCompare(a.date))
+    const recent7 = sorted.filter((_, i) => i < Math.ceil(sorted.length / 2))
+    const prev7   = sorted.filter((_, i) => i >= Math.ceil(sorted.length / 2))
+    const recentAvg = recent7.length > 0 ? recent7.reduce((a, p) => a + p.reactions, 0) / recent7.length : 0
+    const prevAvg   = prev7.length   > 0 ? prev7.reduce((a, p) => a + p.reactions, 0) / prev7.length   : 0
+    const change = prevAvg > 0 ? Math.round((recentAvg - prevAvg) / prevAvg * 100) : 0
+    return { recentAvg: Math.round(recentAvg), prevAvg: Math.round(prevAvg), change }
+  }, [fp])
+
+  // 상위 기여 계정 TOP 8
+  const topAccounts = useMemo(() => {
+    const map: Record<string, { reactions: number; likes: number; count: number; channel: string }> = {}
+    for (const p of fp) {
+      const key = `${p.channel}::${p.owner}`
+      if (!map[key]) map[key] = { reactions: 0, likes: 0, count: 0, channel: p.channel }
+      map[key].reactions += p.reactions
+      map[key].likes += p.likes
+      map[key].count++
+    }
+    return Object.entries(map)
+      .map(([key, v]) => ({ owner: key.split("::")[1], ...v }))
+      .sort((a, b) => b.reactions - a.reactions)
+      .slice(0, 8)
+  }, [fp])
+
+  // 해시태그 수 구간별 평균 반응
+  const hashtagImpact = useMemo(() => {
+    const buckets: Record<string, number[]> = { "1~3개": [], "4~6개": [], "7~9개": [], "10개+": [] }
+    fp.forEach(p => {
+      const n = p.hashtags.length
+      const bucket = n <= 3 ? "1~3개" : n <= 6 ? "4~6개" : n <= 9 ? "7~9개" : "10개+"
+      buckets[bucket].push(p.reactions)
+    })
+    return Object.entries(buckets).map(([bucket, vals]) => ({
+      bucket,
+      avg: vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0,
+      count: vals.length,
+    }))
   }, [fp])
 
   const byHashtag = useMemo(() => {
@@ -305,82 +364,171 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
         ══════════════════════════════════════════════════════════════════ */}
         {tab === "overview" && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-              {/* 콘텐츠 유형 분포 */}
-              <Card>
-                <SectionTitle>콘텐츠 유형별 게시물 수</SectionTitle>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={byType} barSize={36}>
-                    <XAxis dataKey="type" stroke="#333" tick={{ fill: "#666", fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis stroke="#333" tick={{ fill: "#555", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} />
-                    <Bar dataKey="count" name="게시물" radius={[8, 8, 0, 0]}>
-                      {byType.map((e, i) => <Cell key={i} fill={TYPE_COLORS[e.type] ?? "#6366f1"} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </Card>
-
-              {/* 해시태그 TOP 12 */}
-              <Card>
-                <SectionTitle>인기 해시태그 TOP 12</SectionTitle>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={byHashtag} layout="vertical" barSize={14}>
-                    <XAxis type="number" stroke="#333" tick={{ fill: "#555", fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis type="category" dataKey="tag" stroke="#333" tick={{ fill: "#888", fontSize: 10 }} axisLine={false} tickLine={false} width={110} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} />
-                    <Bar dataKey="count" name="게시물수" fill="#6366f1" radius={[0, 6, 6, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Card>
+            {/* ① 버즈 모멘텀 배너 */}
+            <div className="rounded-2xl p-5 border flex items-center justify-between gap-4 flex-wrap"
+              style={{
+                background: momentum.change >= 0 ? "#0d2e1a" : "#2e0d0d",
+                borderColor: momentum.change >= 0 ? "#34d39933" : "#f8717133",
+              }}>
+              <div>
+                <p className="text-[11px] font-bold tracking-widest uppercase mb-1"
+                  style={{ color: momentum.change >= 0 ? "#34d399" : "#f87171" }}>
+                  버즈 모멘텀 — {momentum.change >= 0 ? "📈 상승 중" : "📉 하락 중"}
+                </p>
+                <p className="text-2xl font-bold text-[#f0f0f6]">
+                  {momentum.change >= 0 ? "+" : ""}{momentum.change}%
+                  <span className="text-sm font-normal text-[#666] ml-2">전반부 대비 후반부</span>
+                </p>
+              </div>
+              <div className="flex gap-6 text-center">
+                <div>
+                  <p className="text-[10px] text-[#555] mb-0.5">전반부 평균 반응</p>
+                  <p className="text-lg font-bold text-[#aaa]">{fmt(momentum.prevAvg)}</p>
+                </div>
+                <div className="w-px bg-[#2a2a3a]" />
+                <div>
+                  <p className="text-[10px] text-[#555] mb-0.5">후반부 평균 반응</p>
+                  <p className="text-lg font-bold" style={{ color: momentum.change >= 0 ? "#34d399" : "#f87171" }}>
+                    {fmt(momentum.recentAvg)}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* 캠페인별 비교 */}
-            {selectedCampaign === "전체" && byCampaign.length > 1 && (
+            {/* ② 캠페인별 성과 비교 */}
+            {byCampaign.length > 1 && (
               <Card>
-                <SectionTitle>캠페인별 게시물 수 비교</SectionTitle>
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={byCampaign} barSize={40}>
-                    <XAxis dataKey="name" stroke="#333" tick={{ fill: "#777", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis stroke="#333" tick={{ fill: "#555", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} />
-                    <Bar dataKey="count" name="게시물" radius={[8, 8, 0, 0]}>
-                      {byCampaign.map((e, i) => <Cell key={i} fill={getCampaignColor(e.fullName)} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </Card>
-            )}
-
-            {/* 요약 테이블 */}
-            <Card>
-              <SectionTitle>콘텐츠 유형 요약</SectionTitle>
-              <div className="overflow-auto">
-                <table className="w-full text-sm">
+                <SectionTitle>캠페인별 성과 비교</SectionTitle>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={byCampaign} barSize={36}>
+                      <XAxis dataKey="name" stroke="#333" tick={{ fill: "#777", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis stroke="#333" tick={{ fill: "#555", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }}
+                        formatter={(v: number) => [v.toLocaleString(), "게시물 수"]} />
+                      <Bar dataKey="count" name="게시물 수" radius={[8,8,0,0]}>
+                        {byCampaign.map((e, i) => <Cell key={i} fill={getCampaignColor(e.fullName)} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={byCampaign} barSize={36}>
+                      <XAxis dataKey="name" stroke="#333" tick={{ fill: "#777", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis stroke="#333" tick={{ fill: "#555", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }}
+                        formatter={(v: number) => [fmt(v), "게시물당 평균 반응"]} />
+                      <Bar dataKey="avgReactions" name="평균 반응" radius={[8,8,0,0]}>
+                        {byCampaign.map((e, i) => <Cell key={i} fill={getCampaignColor(e.fullName)} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* 캠페인 요약 테이블 */}
+                <table className="w-full text-xs mt-4">
                   <thead>
                     <tr className="border-b border-[#2a2a3a]">
-                      {["유형", "게시물 수", "총 댓글", "평균 댓글/건"].map(h => (
-                        <th key={h} className={`py-3 text-[11px] font-semibold text-[#555] uppercase tracking-wider ${h === "유형" ? "text-left" : "text-right"}`}>{h}</th>
+                      {["캠페인", "게시물", "총 좋아요", "총 댓글", "게시물당 반응", "TikTok 재생"].map(h => (
+                        <th key={h} className={`py-2 text-[10px] font-bold text-[#444] uppercase tracking-wider ${h === "캠페인" ? "text-left" : "text-right"}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {byType.map(row => (
-                      <tr key={row.type} className="border-b border-[#1e1e28] hover:bg-[#ffffff04]">
-                        <td className="py-3 flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full" style={{ background: TYPE_COLORS[row.type] ?? "#6366f1" }} />
-                          <span className="text-sm text-[#ccc]">{row.type}</span>
+                    {byCampaign.map(row => (
+                      <tr key={row.name} className="border-b border-[#1a1a22] hover:bg-[#ffffff03]">
+                        <td className="py-2.5 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: getCampaignColor(row.fullName) }} />
+                          <span className="text-[#ccc] truncate max-w-[120px]">{row.name}</span>
                         </td>
-                        <td className="py-3 text-right text-[#ccc]">{row.count.toLocaleString()}</td>
-                        <td className="py-3 text-right text-[#ccc]">{fmt(row.comments)}</td>
-                        <td className="py-3 text-right font-semibold" style={{ color: "#6366f1" }}>{row.avg}</td>
+                        <td className="py-2.5 text-right text-[#888]">{row.count}</td>
+                        <td className="py-2.5 text-right text-[#888]">{fmt(row.likes)}</td>
+                        <td className="py-2.5 text-right text-[#888]">{fmt(row.comments)}</td>
+                        <td className="py-2.5 text-right font-bold" style={{ color: getCampaignColor(row.fullName) }}>{fmt(row.avgReactions)}</td>
+                        <td className="py-2.5 text-right text-[#888]">{row.plays > 0 ? fmt(row.plays) : "-"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+              {/* ③ 콘텐츠 유형별 평균 반응 */}
+              <Card>
+                <SectionTitle>콘텐츠 유형 — 평균 반응 vs 게시물 수</SectionTitle>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={byType} barSize={32}>
+                    <XAxis dataKey="type" stroke="#333" tick={{ fill: "#666", fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="left" stroke="#333" tick={{ fill: "#555", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#333" tick={{ fill: "#555", fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} />
+                    <Legend wrapperStyle={{ fontSize: 11, color: "#666" }} />
+                    <Bar yAxisId="left" dataKey="avgReactions" name="평균 반응" radius={[6,6,0,0]}>
+                      {byType.map((e, i) => <Cell key={i} fill={TYPE_COLORS[e.type] ?? "#6366f1"} />)}
+                    </Bar>
+                    <Bar yAxisId="right" dataKey="count" name="게시물 수" fill="#2a2a3a" radius={[6,6,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+
+              {/* ④ 해시태그 수 vs 평균 반응 */}
+              <Card>
+                <SectionTitle>해시태그 개수 — 반응에 영향을 미칠까?</SectionTitle>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={hashtagImpact} barSize={40}>
+                    <XAxis dataKey="bucket" stroke="#333" tick={{ fill: "#666", fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <YAxis stroke="#333" tick={{ fill: "#555", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }}
+                      formatter={(v: number, name: string) => [name === "avg" ? fmt(v) : v, name === "avg" ? "평균 반응" : "게시물 수"]} />
+                    <Bar dataKey="avg" name="avg" fill="#f59e0b" radius={[8,8,0,0]}
+                      label={{ position: "top", fill: "#666", fontSize: 10, formatter: (v: number) => fmt(v) }} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <p className="text-[10px] text-[#444] mt-2 text-center">각 구간 게시물 수: {hashtagImpact.map(h => `${h.bucket} ${h.count}건`).join(" / ")}</p>
+              </Card>
+            </div>
+
+            {/* ⑤ 상위 기여 계정 */}
+            <Card>
+              <SectionTitle>반응 TOP 8 계정</SectionTitle>
+              <div className="space-y-2">
+                {topAccounts.map((acc, i) => {
+                  const maxReactions = topAccounts[0]?.reactions ?? 1
+                  const barPct = Math.round(acc.reactions / maxReactions * 100)
+                  const color = CHANNEL_COLORS[acc.channel] ?? "#6366f1"
+                  return (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="text-[11px] text-[#444] w-4 text-right flex-shrink-0">{i + 1}</span>
+                      <span className="text-[11px] font-semibold text-[#aaa] w-28 truncate flex-shrink-0">@{acc.owner}</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0"
+                        style={{ background: color + "22", color }}>
+                        {acc.channel === "TikTok" ? "TT" : "IG"}
+                      </span>
+                      <div className="flex-1 h-2 bg-[#1e1e28] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${barPct}%`, background: color }} />
+                      </div>
+                      <span className="text-[11px] text-[#666] w-14 text-right flex-shrink-0">{fmt(acc.reactions)}</span>
+                      <span className="text-[10px] text-[#444] w-10 text-right flex-shrink-0">{acc.count}건</span>
+                    </div>
+                  )
+                })}
               </div>
             </Card>
+
+            {/* ⑥ 인기 해시태그 */}
+            <Card>
+              <SectionTitle>인기 해시태그 TOP 12</SectionTitle>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={byHashtag} layout="vertical" barSize={14}>
+                  <XAxis type="number" stroke="#333" tick={{ fill: "#555", fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="tag" stroke="#333" tick={{ fill: "#888", fontSize: 10 }} axisLine={false} tickLine={false} width={120} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} />
+                  <Bar dataKey="count" name="게시물수" fill="#6366f1" radius={[0,6,6,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+
           </div>
         )}
 
