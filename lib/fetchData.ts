@@ -55,6 +55,11 @@ function detectIP(caption: string, hashtags: string[]): string {
   return "미분류"
 }
 
+function proxyImg(url: string): string {
+  if (!url) return ""
+  return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=400&output=jpg`
+}
+
 function toNum(v: unknown): number {
   const n = parseFloat(String(v ?? "").replace(/,/g, ""))
   return isNaN(n) ? 0 : n
@@ -100,7 +105,7 @@ function parseInstagram(rows: Record<string, string>[]): Post[] {
       contentType: row["type"]?.toLowerCase() === "video" ? "영상" : row["type"]?.toLowerCase() === "sidecar" ? "캐러셀" : "이미지",
       ipName: detectIP(caption, hashtags),
       url: row["url"] ?? "",
-      displayUrl: row["displayUrl"] ?? row["images/0"] ?? "",
+      displayUrl: proxyImg(row["displayUrl"] ?? row["images/0"] ?? ""),
       isVideo: row["type"]?.toLowerCase() === "video",
     }
   }).filter(p => p.date)
@@ -140,7 +145,14 @@ function parseTikTok(rows: Record<string, string>[]): Post[] {
       contentType: "영상",
       ipName: detectIP(caption, hashtags),
       url: row["webVideoUrl"] ?? row["url"] ?? "",
-      displayUrl: row["covers/default"] ?? row["thumbnailUrl"] ?? row["coverUrl"] ?? "",
+      displayUrl: proxyImg(
+        row["covers/dynamic"] ??
+        row["covers/default"] ??
+        row["videoMeta/coverUrl"] ??
+        row["thumbnailUrl"] ??
+        row["coverUrl"] ??
+        row["authorMeta/avatar"] ?? ""
+      ),
       isVideo: true,
     }
   }).filter(p => p.date)
