@@ -16,6 +16,10 @@ const CAMPAIGN_COLORS = [
 const TYPE_COLORS: Record<string, string> = {
   "영상": "#6366f1", "캐러셀": "#f97316", "이미지": "#34d399",
 }
+const CHANNEL_COLORS: Record<string, string> = {
+  "Instagram": "#e1306c",
+  "TikTok": "#69c9d0",
+}
 
 function fmt(n: number): string {
   if (n >= 10000) return `${(n / 10000).toFixed(1)}만`
@@ -69,16 +73,26 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
   const [isPending, startTransition] = useTransition()
   const [tab, setTab] = useState<Tab>("overview")
   const [selectedCampaign, setSelectedCampaign] = useState("전체")
-  const [sortBy, setSortBy] = useState<"comments" | "impressions">("comments")
+  const [selectedChannel, setSelectedChannel] = useState<"전체" | "Instagram" | "TikTok">("전체")
+  const [sortBy, setSortBy] = useState<"reactions" | "plays" | "comments">("reactions")
 
   const refresh = useCallback(() => {
     startTransition(() => { router.refresh() })
   }, [router])
 
+  const igCount = posts.filter(p => p.channel === "Instagram").length
+  const ttCount = posts.filter(p => p.channel === "TikTok").length
   const allCampaigns = ["전체", ...CAMPAIGN_RULES.map(r => r.name), "기타_콜라보", "미분류"]
-  const fp = selectedCampaign === "전체" ? posts : posts.filter(p => p.ipName === selectedCampaign)
 
-  const totalComments = useMemo(() => fp.reduce((a, p) => a + p.comments, 0), [fp])
+  const fp = useMemo(() => posts
+    .filter(p => selectedCampaign === "전체" || p.ipName === selectedCampaign)
+    .filter(p => selectedChannel === "전체" || p.channel === selectedChannel),
+  [posts, selectedCampaign, selectedChannel])
+
+  const totalComments  = useMemo(() => fp.reduce((a, p) => a + p.comments, 0), [fp])
+  const totalPlays     = useMemo(() => fp.reduce((a, p) => a + p.plays, 0), [fp])
+  const totalLikes     = useMemo(() => fp.reduce((a, p) => a + p.likes, 0), [fp])
+  const totalReactions = useMemo(() => fp.reduce((a, p) => a + p.reactions, 0), [fp])
 
   const byType = useMemo(() => {
     const map: Record<string, { comments: number; count: number }> = {}
@@ -174,6 +188,27 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
           </div>
         </div>
 
+        {/* 채널 선택 */}
+        <div className="max-w-7xl mx-auto px-6 pb-2 flex gap-2">
+          {(["전체", "Instagram", "TikTok"] as const).map(ch => {
+            const count = ch === "전체" ? posts.length : ch === "Instagram" ? igCount : ttCount
+            const color = ch === "전체" ? "#6366f1" : CHANNEL_COLORS[ch]
+            const isActive = selectedChannel === ch
+            return (
+              <button key={ch} onClick={() => setSelectedChannel(ch)}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all"
+                style={{
+                  background: isActive ? color : "#1e1e28",
+                  color: isActive ? "#fff" : "#666",
+                  border: `1px solid ${isActive ? color : "#2a2a3a"}`,
+                }}>
+                {ch === "Instagram" ? "📸" : ch === "TikTok" ? "🎵" : "🌐"} {ch}
+                <span className="opacity-70 text-[10px]">{count}</span>
+              </button>
+            )
+          })}
+        </div>
+
         {/* 캠페인 필터 탭 */}
         <div className="max-w-7xl mx-auto px-6 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
           {allCampaigns.map((c) => {
@@ -203,17 +238,23 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
         {/* ── KPI ──────────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <Kpi label="수집 게시물" value={`${fp.length}건`}
-            sub={selectedCampaign === "전체" ? `전체 캠페인` : (selectedCampaign.split("_").pop() ?? "")}
+            sub={`IG ${fp.filter(p=>p.channel==="Instagram").length} / TT ${fp.filter(p=>p.channel==="TikTok").length}`}
             accent="#6366f1" />
-          <Kpi label="총 댓글 반응" value={fmt(totalComments)}
-            sub={`평균 ${fp.length > 0 ? (totalComments / fp.length).toFixed(1) : 0}개/게시물`}
-            accent="#f97316" />
-          <Kpi label="영상 비율" value={`${fp.length > 0 ? Math.round(fp.filter(p => p.isVideo).length / fp.length * 100) : 0}%`}
-            sub={`영상 ${fp.filter(p => p.isVideo).length} / 이미지 ${fp.filter(p => !p.isVideo).length}`}
-            accent="#34d399" />
-          <Kpi label="캐러셀 비율" value={`${fp.length > 0 ? Math.round(fp.filter(p => p.contentType === "캐러셀").length / fp.length * 100) : 0}%`}
-            sub={`${fp.filter(p => p.contentType === "캐러셀").length}건`}
+          {selectedChannel === "TikTok" ? (
+            <Kpi label="총 재생수" value={fmt(totalPlays)}
+              sub={`평균 ${fp.length > 0 ? fmt(Math.round(totalPlays/fp.length)) : 0}/건`}
+              accent="#69c9d0" />
+          ) : (
+            <Kpi label="총 댓글" value={fmt(totalComments)}
+              sub={`평균 ${fp.length > 0 ? (totalComments/fp.length).toFixed(1) : 0}개/건`}
+              accent="#e1306c" />
+          )}
+          <Kpi label="총 좋아요" value={fmt(totalLikes)}
+            sub={`평균 ${fp.length > 0 ? fmt(Math.round(totalLikes/fp.length)) : 0}/건`}
             accent="#f59e0b" />
+          <Kpi label="총 반응수" value={fmt(totalReactions)}
+            sub="댓글+좋아요+공유 합산"
+            accent="#34d399" />
         </div>
 
         {/* ── 탭 ───────────────────────────────────────────────────────────── */}
@@ -365,7 +406,7 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
             {/* 정렬 옵션 */}
             <div className="flex items-center gap-2 mb-4">
               <span className="text-[11px] text-[#555]">정렬:</span>
-              {(["comments", "impressions"] as const).map(s => (
+              {(["reactions", "plays", "comments"] as const).map(s => (
                 <button key={s} onClick={() => setSortBy(s)}
                   className="px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
                   style={{
@@ -373,7 +414,7 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
                     border: `1px solid ${sortBy === s ? "#6366f1" : "#2a2a3a"}`,
                     color: sortBy === s ? "#818cf8" : "#555",
                   }}>
-                  {s === "comments" ? "💬 댓글 많은 순" : "👁 노출 순"}
+                  {s === "reactions" ? "🔥 반응 순" : s === "plays" ? "▶ 재생 순" : "💬 댓글 순"}
                 </button>
               ))}
               <span className="ml-auto text-[11px] text-[#444]">상위 20건</span>
@@ -406,10 +447,16 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
                       {i + 1}
                     </div>
 
-                    {/* 콘텐츠 유형 */}
-                    <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md text-[9px] font-bold"
-                      style={{ background: "#00000088", color: "#fff" }}>
-                      {p.isVideo ? "▶" : p.contentType === "캐러셀" ? "⊞" : "◻"}
+                    {/* 채널 + 콘텐츠 유형 */}
+                    <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold"
+                        style={{ background: CHANNEL_COLORS[p.channel] + "dd", color: "#fff" }}>
+                        {p.channel === "TikTok" ? "TT" : "IG"}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold"
+                        style={{ background: "#00000088", color: "#fff" }}>
+                        {p.isVideo ? "▶" : p.contentType === "캐러셀" ? "⊞" : "◻"}
+                      </span>
                     </div>
 
                     {/* 캠페인 배지 */}
@@ -433,7 +480,9 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
                       ))}
                     </div>
                     <div className="flex justify-between items-center mt-2 pt-2 border-t border-[#1e1e28]">
-                      <span className="text-[10px] text-[#666]">💬 {p.comments}</span>
+                      <span className="text-[10px] text-[#666]">
+                        {p.channel === "TikTok" ? `▶ ${fmt(p.plays)}` : `💬 ${p.comments}`}
+                      </span>
                       <span className="text-[10px] text-[#444]">{p.date.slice(5)}</span>
                     </div>
                   </div>
@@ -455,7 +504,7 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
               <table className="w-full text-xs">
                 <thead className="sticky top-0" style={{ background: "#16161d" }}>
                   <tr className="border-b border-[#2a2a3a]">
-                    {["날짜", "캠페인", "계정", "유형", "댓글", "해시태그", "링크"].map(h => (
+                    {["날짜", "채널", "캠페인", "계정", "유형", "재생", "좋아요", "댓글", "링크"].map(h => (
                       <th key={h} className={`px-4 py-3 text-[10px] font-bold tracking-widest text-[#444] uppercase whitespace-nowrap ${h === "댓글" || h === "링크" ? "text-center" : "text-left"}`}>{h}</th>
                     ))}
                   </tr>
@@ -464,6 +513,12 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
                   {fp.slice(0, 300).map((p, i) => (
                     <tr key={i} className="border-b border-[#1a1a22] hover:bg-[#ffffff03] transition-colors">
                       <td className="px-4 py-2.5 text-[#666] whitespace-nowrap">{p.date}</td>
+                      <td className="px-4 py-2.5">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                          style={{ background: CHANNEL_COLORS[p.channel] + "22", color: CHANNEL_COLORS[p.channel] }}>
+                          {p.channel === "TikTok" ? "🎵 TikTok" : "📸 IG"}
+                        </span>
+                      </td>
                       <td className="px-4 py-2.5">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
                           style={{ background: getCampaignColor(p.ipName) + "22", color: getCampaignColor(p.ipName) }}>
@@ -477,8 +532,9 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
                           {p.contentType}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 text-center text-[#888]">{p.comments}</td>
-                      <td className="px-4 py-2.5 max-w-[180px] truncate text-[#555]">{p.hashtags.slice(0, 3).join(" ")}</td>
+                      <td className="px-4 py-2.5 text-center text-[#888]">{p.plays > 0 ? fmt(p.plays) : "-"}</td>
+                      <td className="px-4 py-2.5 text-center text-[#888]">{p.likes > 0 ? fmt(p.likes) : "-"}</td>
+                      <td className="px-4 py-2.5 text-center text-[#888]">{p.comments > 0 ? p.comments : "-"}</td>
                       <td className="px-4 py-2.5 text-center">
                         {p.url && (
                           <a href={p.url} target="_blank" rel="noopener noreferrer"
