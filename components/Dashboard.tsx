@@ -6,6 +6,7 @@ import {
   LineChart, Line, Legend, Cell,
 } from "recharts"
 import type { Post } from "@/lib/fetchData"
+import { CAMPAIGN_RULES } from "@/lib/fetchData"
 import KpiCard from "./KpiCard"
 
 const TYPE_COLORS: Record<string, string> = {
@@ -24,15 +25,19 @@ type Tab = "overview" | "funnel" | "trend" | "top" | "raw"
 export default function Dashboard({ posts }: { posts: Post[] }) {
   const [tab, setTab] = useState<Tab>("overview")
   const [sortBy, setSortBy] = useState<"comments" | "impressions" | "engagementRate">("comments")
+  const [selectedCampaign, setSelectedCampaign] = useState<string>("전체")
 
-  const totalImp = useMemo(() => posts.reduce((a, p) => a + p.impressions, 0), [posts])
-  const totalComments = useMemo(() => posts.reduce((a, p) => a + p.comments, 0), [posts])
+  const allCampaigns = ["전체", ...CAMPAIGN_RULES.map(r => r.name), "기타_콜라보", "미분류"]
+  const filteredPosts = selectedCampaign === "전체" ? posts : posts.filter(p => p.ipName === selectedCampaign)
+
+  const totalImp = useMemo(() => filteredPosts.reduce((a, p) => a + p.impressions, 0), [filteredPosts])
+  const totalComments = useMemo(() => filteredPosts.reduce((a, p) => a + p.comments, 0), [filteredPosts])
   const avgEng = totalImp > 0 ? ((totalComments / totalImp) * 100).toFixed(2) : "0"
 
   // 콘텐츠 유형별 집계
   const byType = useMemo(() => {
     const map: Record<string, { impressions: number; comments: number; count: number }> = {}
-    for (const p of posts) {
+    for (const p of filteredPosts) {
       if (!map[p.contentType]) map[p.contentType] = { impressions: 0, comments: 0, count: 0 }
       map[p.contentType].impressions += p.impressions
       map[p.contentType].comments += p.comments
@@ -50,7 +55,7 @@ export default function Dashboard({ posts }: { posts: Post[] }) {
   // IP별 집계
   const byIP = useMemo(() => {
     const map: Record<string, { comments: number; count: number }> = {}
-    for (const p of posts) {
+    for (const p of filteredPosts) {
       if (!map[p.ipName]) map[p.ipName] = { comments: 0, count: 0 }
       map[p.ipName].comments += p.comments
       map[p.ipName].count++
@@ -63,7 +68,7 @@ export default function Dashboard({ posts }: { posts: Post[] }) {
   // 날짜별 트렌드
   const byDate = useMemo(() => {
     const map: Record<string, { impressions: number; comments: number; count: number }> = {}
-    for (const p of posts) {
+    for (const p of filteredPosts) {
       const d = p.date.slice(0, 10)
       if (!map[d]) map[d] = { impressions: 0, comments: 0, count: 0 }
       map[d].impressions += p.impressions
@@ -82,7 +87,7 @@ export default function Dashboard({ posts }: { posts: Post[] }) {
   // 해시태그 집계
   const byHashtag = useMemo(() => {
     const map: Record<string, number> = {}
-    for (const p of posts) {
+    for (const p of filteredPosts) {
       for (const h of p.hashtags) {
         map[h] = (map[h] ?? 0) + 1
       }
@@ -95,8 +100,8 @@ export default function Dashboard({ posts }: { posts: Post[] }) {
 
   // 상위 게시물
   const topPosts = useMemo(
-    () => [...posts].sort((a, b) => b[sortBy] - a[sortBy]).slice(0, 20),
-    [posts, sortBy]
+    () => [...filteredPosts].sort((a, b) => b[sortBy] - a[sortBy]).slice(0, 20),
+    [filteredPosts, sortBy]
   )
 
   const tabs: { id: Tab; label: string }[] = [
@@ -121,12 +126,30 @@ export default function Dashboard({ posts }: { posts: Post[] }) {
         <h1 className="text-2xl font-bold">🇯🇵 일본 IP 콜라보 성과 대시보드</h1>
         <p className="text-muted text-sm mt-1">
           Instagram 해시태그 수집 기준 · 총 {posts.length}건 · 5분마다 자동 갱신
+          {selectedCampaign !== "전체" && <span className="ml-2 text-[#6366f1]">▸ {selectedCampaign.split("_").pop()} 필터 중</span>}
         </p>
+      </div>
+
+      {/* 캠페인 필터 */}
+      <div className="flex gap-2 mb-5 flex-wrap">
+        {allCampaigns.map((c) => (
+          <button
+            key={c}
+            onClick={() => setSelectedCampaign(c)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+              selectedCampaign === c
+                ? "bg-[#6366f1] border-[#6366f1] text-white"
+                : "border-border text-muted hover:text-[#e2e2e8] bg-surface"
+            }`}
+          >
+            {c === "전체" ? `전체 (${posts.length})` : `${c.split("_").pop()} (${posts.filter(p => p.ipName === c).length})`}
+          </button>
+        ))}
       </div>
 
       {/* KPI 카드 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <KpiCard label="총 게시물" value={`${posts.length}건`} sub={`오늘 ${posts.filter(p => p.date === new Date().toISOString().slice(0,10)).length}건`} />
+        <KpiCard label="총 게시물" value={`${filteredPosts.length}건`} sub={selectedCampaign === "전체" ? `전체 캠페인` : selectedCampaign.split("_").pop() ?? ""} />
         <KpiCard label="총 댓글수" value={fmt(totalComments)} sub="반응 지표" />
         <KpiCard label="콘텐츠 유형" value={`${byType.length}종`} sub={byType.map(t => `${t.type} ${t.count}`).join(" / ")} />
         <KpiCard label="추적 해시태그" value={`${byHashtag.length}개`} sub={byHashtag.slice(0,2).map(h=>h.tag).join(", ")} />
@@ -363,15 +386,16 @@ export default function Dashboard({ posts }: { posts: Post[] }) {
           <table className="w-full text-xs">
             <thead>
               <tr className="text-muted border-b border-border">
-                {["날짜", "계정", "유형", "댓글", "해시태그", "링크"].map((h) => (
+                {["날짜", "캠페인", "계정", "유형", "댓글", "해시태그", "링크"].map((h) => (
                   <th key={h} className="text-left px-4 py-3 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {posts.slice(0, 300).map((p, i) => (
+              {filteredPosts.slice(0, 300).map((p, i) => (
                 <tr key={i} className="border-b border-border hover:bg-border/30">
                   <td className="px-4 py-2 whitespace-nowrap">{p.date}</td>
+                  <td className="px-4 py-2 max-w-[120px] truncate text-[#818cf8]">{p.ipName.split("_").pop()}</td>
                   <td className="px-4 py-2">@{p.owner}</td>
                   <td className="px-4 py-2">{p.contentType}</td>
                   <td className="px-4 py-2 text-right">{p.comments}</td>

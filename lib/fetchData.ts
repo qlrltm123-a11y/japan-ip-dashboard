@@ -20,25 +20,38 @@ export interface Post {
   isVideo: boolean
 }
 
-const HASHTAG_IP_MAP: Record<string, string> = {
-  コラボ商品: "콜라보_공통",
-  IPコラボ: "콜라보_공통",
-  キャラコラボ: "콜라보_공통",
-  コラボグッズ: "콜라보_공통",
-  コラボ: "콜라보_공통",
+// ── 캠페인 감지 규칙 ──────────────────────────────────────────────────────────
+// 새 캠페인 추가 시 여기에만 키워드 배열 추가하면 자동 분류됩니다
+export const CAMPAIGN_RULES: { name: string; keywords: string[] }[] = [
+  {
+    name: "ウェイクメイク_平成ギャルエディション",
+    keywords: ["ウェイクメイク", "웨이크메이크", "平成ギャル", "헤이세이갸루", "wakemake"],
+  },
+  {
+    name: "カラーグラム_ギャルしんちゃんコレクション",
+    keywords: ["カラーグラム", "컬러그램", "ギャルしんちゃん", "갸루신짱", "colorgram", "しんちゃん"],
+  },
+  // ↓ 새 캠페인 추가 시 여기에 추가
+  // { name: "캠페인명", keywords: ["키워드1", "키워드2"] },
+]
+
+function detectIP(caption: string, hashtags: string[]): string {
+  const text = (caption + " " + hashtags.join(" ")).toLowerCase()
+  for (const rule of CAMPAIGN_RULES) {
+    for (const kw of rule.keywords) {
+      if (text.includes(kw.toLowerCase())) return rule.name
+    }
+  }
+  const commonKws = ["コラボ", "collab", "collaboration", "콜라보"]
+  for (const kw of commonKws) {
+    if (text.includes(kw.toLowerCase())) return "기타_콜라보"
+  }
+  return "미분류"
 }
 
 function toNum(v: unknown): number {
   const n = parseFloat(String(v ?? "").replace(/,/g, ""))
   return isNaN(n) ? 0 : n
-}
-
-function detectIP(caption: string, hashtags: string[]): string {
-  const text = caption + " " + hashtags.join(" ")
-  for (const [tag, ip] of Object.entries(HASHTAG_IP_MAP)) {
-    if (text.includes(tag)) return ip
-  }
-  return "기타"
 }
 
 function contentTypeLabel(type: string): string {
@@ -62,7 +75,6 @@ export async function fetchPosts(): Promise<Post[]> {
       const caption = row["caption"] ?? ""
       const comments = toNum(row["commentsCount"])
 
-      // 해시태그: hashtags/0, hashtags/1 ... 컬럼에서 수집
       const hashtags: string[] = []
       for (let i = 0; i < 10; i++) {
         const h = row[`hashtags/${i}`]
@@ -70,7 +82,6 @@ export async function fetchPosts(): Promise<Post[]> {
         else break
       }
 
-      // 노출수 추정: 댓글 × 50 (좋아요 데이터 없음)
       const impressions = comments > 0 ? comments * 50 : 100
       const reactions = comments
       const engagementRate = impressions > 0 ? +((reactions / impressions) * 100).toFixed(2) : 0
