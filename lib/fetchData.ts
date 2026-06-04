@@ -17,6 +17,7 @@ export interface Post {
   ipName: string
   url: string
   displayUrl: string
+  isVideo: boolean
 }
 
 const HASHTAG_IP_MAP: Record<string, string> = {
@@ -87,7 +88,8 @@ export async function fetchPosts(): Promise<Post[]> {
         contentType: contentTypeLabel(row["type"] ?? ""),
         ipName: detectIP(caption, hashtags),
         url: row["url"] ?? "",
-        displayUrl: row["displayUrl"] ?? "",
+        displayUrl: row["displayUrl"] ?? row["images/0"] ?? "",
+        isVideo: (row["type"] ?? "").toLowerCase() === "video",
       }
     })
     .filter((p) => p.date)

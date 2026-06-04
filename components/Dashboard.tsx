@@ -296,42 +296,64 @@ export default function Dashboard({ posts }: { posts: Post[] }) {
             ))}
           </div>
 
-          {topPosts.map((p, i) => (
-            <div key={i} className="bg-surface border border-border rounded-xl p-4">
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-[#6366f1] font-bold text-sm">#{i + 1}</span>
-                    <span className="text-sm font-semibold">@{p.owner}</span>
-                    {p.ownerFullName && <span className="text-xs text-muted">{p.ownerFullName}</span>}
-                    <span className="text-xs text-muted bg-border px-2 py-0.5 rounded">{p.contentType}</span>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {topPosts.map((p, i) => (
+              <a
+                key={i}
+                href={p.url || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-surface border border-border rounded-xl overflow-hidden hover:border-[#6366f1] transition-colors group"
+              >
+                {/* 썸네일 */}
+                <div className="relative aspect-square bg-border overflow-hidden">
+                  {p.displayUrl ? (
+                    <img
+                      src={p.displayUrl}
+                      alt={p.caption.slice(0, 40)}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted text-3xl">
+                      {p.isVideo ? "▶" : "🖼"}
+                    </div>
+                  )}
+                  {/* 콘텐츠 유형 뱃지 */}
+                  <div className="absolute top-2 left-2">
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{ background: "#0009", color: "#fff" }}>
+                      {p.isVideo ? "▶ 영상" : p.contentType === "캐러셀" ? "⊞ 캐러셀" : "🖼 이미지"}
+                    </span>
                   </div>
-                  <p className="text-xs text-muted line-clamp-2">{p.caption.slice(0, 120)}</p>
-                  <div className="flex gap-1 mt-1 flex-wrap">
-                    {p.hashtags.slice(0, 5).map((h, j) => (
-                      <span key={j} className="text-xs text-[#818cf8]">{h}</span>
+                  {/* 순위 */}
+                  <div className="absolute top-2 right-2 w-6 h-6 bg-[#6366f1] rounded-full flex items-center justify-center text-xs font-bold text-white">
+                    {i + 1}
+                  </div>
+                </div>
+
+                {/* 정보 */}
+                <div className="p-3">
+                  <div className="flex items-center gap-1 mb-1">
+                    <span className="text-xs font-semibold truncate">@{p.owner}</span>
+                    {p.ownerFullName && (
+                      <span className="text-xs text-muted truncate">· {p.ownerFullName}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted line-clamp-2 mb-2">{p.caption.slice(0, 80)}</p>
+                  <div className="flex gap-1 flex-wrap mb-2">
+                    {p.hashtags.slice(0, 3).map((h, j) => (
+                      <span key={j} className="text-xs text-[#818cf8] truncate">{h}</span>
                     ))}
                   </div>
-                </div>
-                <div className="flex gap-4 text-right shrink-0">
-                  <div>
-                    <div className="text-xs text-muted">댓글</div>
-                    <div className="text-sm font-semibold">{p.comments}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted">날짜</div>
-                    <div className="text-sm">{p.date.slice(5)}</div>
+                  <div className="flex justify-between text-xs text-muted border-t border-border pt-2 mt-1">
+                    <span>💬 {p.comments}</span>
+                    <span>{p.date.slice(5)}</span>
                   </div>
                 </div>
-              </div>
-              {p.url && (
-                <a href={p.url} target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-[#6366f1] mt-2 inline-block hover:underline">
-                  게시물 보기 ↗
-                </a>
-              )}
-            </div>
-          ))}
+              </a>
+            ))}
+          </div>
         </div>
       )}
 
