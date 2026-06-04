@@ -12,6 +12,7 @@ export interface Post {
   owner: string
   ownerFullName: string
   caption: string
+  firstComment: string
   hashtags: string[]
   comments: number
   likes: number
@@ -22,9 +23,45 @@ export interface Post {
   engagementRate: number
   contentType: string
   ipName: string
+  sentiment: "긍정" | "부정" | "구매의도" | "중립"
+  sentimentKeywords: string[]
   url: string
   displayUrl: string
   isVideo: boolean
+}
+
+// ── 감성 분석 키워드 ──────────────────────────────────────────────────────────
+const SENTIMENT_RULES: { label: "긍정" | "부정" | "구매의도"; keywords: string[] }[] = [
+  {
+    label: "구매의도",
+    keywords: ["買いたい", "欲しい", "買った", "注文", "ポチ", "購入", "get", "買う", "살거", "샀어", "구매"],
+  },
+  {
+    label: "긍정",
+    keywords: [
+      "かわいい", "可愛い", "好き", "最高", "素敵", "すごい", "テンション", "ギラギラ",
+      "似合う", "欲しい", "綺麗", "おしゃれ", "映え", "やばい", "好きすぎ", "推し",
+      "✨", "🩷", "💕", "❤️", "💖", "🎀",
+    ],
+  },
+  {
+    label: "부정",
+    keywords: ["高い", "微妙", "いまいち", "残念", "失敗", "ひどい", "最悪", "😢", "😞"],
+  },
+]
+
+export function analyzeSentiment(text: string): { sentiment: Post["sentiment"]; keywords: string[] } {
+  const found: { label: Post["sentiment"]; kw: string }[] = []
+  for (const rule of SENTIMENT_RULES) {
+    for (const kw of rule.keywords) {
+      if (text.includes(kw)) found.push({ label: rule.label, kw })
+    }
+  }
+  const keywords = found.map(f => f.kw)
+  if (found.some(f => f.label === "구매의도")) return { sentiment: "구매의도", keywords }
+  if (found.some(f => f.label === "긍정")) return { sentiment: "긍정", keywords }
+  if (found.some(f => f.label === "부정")) return { sentiment: "부정", keywords }
+  return { sentiment: "중립", keywords }
 }
 
 // ── 캠페인 감지 규칙 ──────────────────────────────────────────────────────────
@@ -86,17 +123,22 @@ function parseInstagram(rows: Record<string, string>[]): Post[] {
       if (h?.trim()) hashtags.push(h.trim().startsWith("#") ? h.trim() : `#${h.trim()}`)
       else break
     }
-    const impressions = comments > 0 ? comments * 50 : 100
-    const reactions = comments
+    const likes = toNum(row["likesCount"])
+    const firstComment = row["firstComment"] ?? ""
+    const impressions = likes > 0 ? likes * 20 : comments > 0 ? comments * 50 : 100
+    const reactions = likes + comments
+    const sentimentText = caption + " " + firstComment
+    const { sentiment, keywords: sentimentKeywords } = analyzeSentiment(sentimentText)
     return {
       channel: "Instagram" as const,
       date: (row["timestamp"] ?? "").split("T")[0],
       owner: row["ownerUsername"] ?? "",
       ownerFullName: row["ownerFullName"] ?? "",
       caption,
+      firstComment,
       hashtags,
       comments,
-      likes: 0,
+      likes,
       plays: 0,
       shares: 0,
       reactions,
@@ -104,6 +146,8 @@ function parseInstagram(rows: Record<string, string>[]): Post[] {
       engagementRate: impressions > 0 ? +((reactions / impressions) * 100).toFixed(2) : 0,
       contentType: row["type"]?.toLowerCase() === "video" ? "영상" : row["type"]?.toLowerCase() === "sidecar" ? "캐러셀" : "이미지",
       ipName: detectIP(caption, hashtags),
+      sentiment,
+      sentimentKeywords,
       url: row["url"] ?? "",
       displayUrl: proxyImg(row["displayUrl"] ?? row["images/0"] ?? ""),
       isVideo: row["type"]?.toLowerCase() === "video",
@@ -113,27 +157,24 @@ function parseInstagram(rows: Record<string, string>[]): Post[] {
 
 function parseTikTok(rows: Record<string, string>[]): Post[] {
   return rows.map((row) => {
-    // TikTok 액터 컬럼: text/desc, authorMeta/name, createTime, stats/playCount, stats/diggCount, stats/commentCount, stats/shareCount, webVideoUrl, covers/default
-    const caption = row["text"] ?? row["desc"] ?? row["description"] ?? ""
-    const plays   = toNum(row["playCount"] ?? row["stats/playCount"] ?? row["videoMeta/playCount"])
-    const likes   = toNum(row["diggCount"] ?? row["stats/diggCount"] ?? row["likesCount"])
-    const comments= toNum(row["commentCount"] ?? row["stats/commentCount"] ?? row["commentsCount"])
-    const shares  = toNum(row["shareCount"] ?? row["stats/shareCount"])
+    const caption   = row["text"] ?? row["desc"] ?? row["description"] ?? ""
+    const plays     = toNum(row["playCount"] ?? row["stats/playCount"] ?? row["videoMeta/playCount"])
+    const likes     = toNum(row["diggCount"] ?? row["stats/diggCount"] ?? row["likesCount"])
+    const comments  = toNum(row["commentCount"] ?? row["stats/commentCount"] ?? row["commentsCount"])
+    const shares    = toNum(row["shareCount"] ?? row["stats/shareCount"])
     const reactions = likes + comments + shares
     const impressions = plays > 0 ? plays : reactions * 20
-
-    // 해시태그: caption에서 추출
-    const hashtags = (caption.match(/#[\w　-鿿가-힣]+/g) ?? []).slice(0, 8)
-
-    const dateRaw = row["createTime"] ?? row["createTimeISO"] ?? row["createdAt"] ?? ""
-    const date = dateRaw.length >= 10 ? dateRaw.slice(0, 10) : new Date(toNum(dateRaw) * 1000).toISOString().slice(0, 10)
-
+    const hashtags  = (caption.match(/#[\w　-鿿가-힣]+/g) ?? []).slice(0, 8)
+    const dateRaw   = row["createTime"] ?? row["createTimeISO"] ?? row["createdAt"] ?? ""
+    const date      = dateRaw.length >= 10 ? dateRaw.slice(0, 10) : new Date(toNum(dateRaw) * 1000).toISOString().slice(0, 10)
+    const { sentiment, keywords: sentimentKeywords } = analyzeSentiment(caption)
     return {
       channel: "TikTok" as const,
       date,
       owner: row["authorMeta/name"] ?? row["author/uniqueId"] ?? row["authorId"] ?? "",
       ownerFullName: row["authorMeta/nickName"] ?? row["author/nickname"] ?? "",
       caption,
+      firstComment: "",
       hashtags,
       comments,
       likes,
@@ -144,14 +185,12 @@ function parseTikTok(rows: Record<string, string>[]): Post[] {
       engagementRate: impressions > 0 ? +((reactions / impressions) * 100).toFixed(2) : 0,
       contentType: "영상",
       ipName: detectIP(caption, hashtags),
+      sentiment,
+      sentimentKeywords,
       url: row["webVideoUrl"] ?? row["url"] ?? "",
       displayUrl: proxyImg(
-        row["covers/dynamic"] ??
-        row["covers/default"] ??
-        row["videoMeta/coverUrl"] ??
-        row["thumbnailUrl"] ??
-        row["coverUrl"] ??
-        row["authorMeta/avatar"] ?? ""
+        row["covers/dynamic"] ?? row["covers/default"] ?? row["videoMeta/coverUrl"] ??
+        row["thumbnailUrl"] ?? row["coverUrl"] ?? row["authorMeta/avatar"] ?? ""
       ),
       isVideo: true,
     }

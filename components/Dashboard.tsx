@@ -39,7 +39,14 @@ const TOOLTIP_STYLE = {
   fontSize: 12,
 }
 
-type Tab = "overview" | "trend" | "top" | "raw"
+type Tab = "overview" | "trend" | "top" | "reaction" | "raw"
+
+const SENTIMENT_COLORS: Record<string, string> = {
+  "구매의도": "#34d399",
+  "긍정":     "#6366f1",
+  "중립":     "#6b7280",
+  "부정":     "#f87171",
+}
 
 // ── 서브 컴포넌트 ─────────────────────────────────────────────────────────────
 function Kpi({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: string }) {
@@ -141,11 +148,33 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
     [fp, sortBy]
   )
 
+  // 감성 분포
+  const sentimentDist = useMemo(() => {
+    const map: Record<string, number> = { "구매의도": 0, "긍정": 0, "중립": 0, "부정": 0 }
+    fp.forEach(p => { map[p.sentiment] = (map[p.sentiment] ?? 0) + 1 })
+    return Object.entries(map).map(([s, count]) => ({ s, count, pct: fp.length > 0 ? Math.round(count / fp.length * 100) : 0 }))
+  }, [fp])
+
+  // 반응 키워드 빈도
+  const topKeywords = useMemo(() => {
+    const map: Record<string, number> = {}
+    fp.forEach(p => p.sentimentKeywords.forEach(kw => { map[kw] = (map[kw] ?? 0) + 1 }))
+    return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 20).map(([kw, count]) => ({ kw, count }))
+  }, [fp])
+
+  // 댓글 있는 게시물 (firstComment 비어있지 않은 것)
+  const postsWithComments = useMemo(() =>
+    fp.filter(p => p.firstComment && p.firstComment.trim().length > 3)
+      .sort((a, b) => b.likes - a.likes)
+      .slice(0, 30),
+  [fp])
+
   const tabs: { id: Tab; label: string }[] = [
-    { id: "overview", label: "개요" },
-    { id: "trend", label: "트렌드" },
-    { id: "top", label: "게시물" },
-    { id: "raw", label: "데이터" },
+    { id: "overview",  label: "개요" },
+    { id: "trend",     label: "트렌드" },
+    { id: "top",       label: "게시물" },
+    { id: "reaction",  label: "💬 댓글 반응" },
+    { id: "raw",       label: "데이터" },
   ]
 
   return (
@@ -489,6 +518,127 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
                 </a>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            Tab: 댓글 반응
+        ══════════════════════════════════════════════════════════════════ */}
+        {tab === "reaction" && (
+          <div className="space-y-4">
+
+            {/* 감성 분포 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {sentimentDist.map(({ s, count, pct }) => (
+                <div key={s} className="bg-[#16161d] border border-[#2a2a3a] rounded-2xl p-5 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full rounded-l-2xl" style={{ background: SENTIMENT_COLORS[s] }} />
+                  <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color: SENTIMENT_COLORS[s] }}>{s}</p>
+                  <p className="text-3xl font-bold text-[#f0f0f6]">{pct}%</p>
+                  <p className="text-[11px] text-[#555] mt-1">{count}건</p>
+                  {/* 바 */}
+                  <div className="mt-3 h-1 rounded-full bg-[#2a2a3a] overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: SENTIMENT_COLORS[s] }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+              {/* 반응 키워드 */}
+              <Card>
+                <SectionTitle>반응 키워드 TOP 20</SectionTitle>
+                {topKeywords.length === 0 ? (
+                  <p className="text-[#444] text-sm">키워드 데이터 없음</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {topKeywords.map(({ kw, count }, i) => {
+                      const size = Math.max(11, Math.min(22, 11 + count * 2))
+                      const opacity = Math.max(0.4, Math.min(1, 0.4 + count * 0.1))
+                      return (
+                        <span key={i} className="px-3 py-1.5 rounded-full font-bold cursor-default"
+                          style={{
+                            fontSize: size,
+                            background: "#6366f1" + Math.round(opacity * 40).toString(16).padStart(2,"0"),
+                            color: `rgba(129,140,248,${opacity})`,
+                            border: "1px solid #6366f133",
+                          }}>
+                          {kw} <span className="text-[10px] opacity-60">{count}</span>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+              </Card>
+
+              {/* 감성별 게시물 수 차트 */}
+              <Card>
+                <SectionTitle>감성 분포 (게시물 수)</SectionTitle>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={sentimentDist} barSize={48}>
+                    <XAxis dataKey="s" stroke="#333" tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <YAxis stroke="#333" tick={{ fill: "#555", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} />
+                    <Bar dataKey="count" name="게시물수" radius={[8,8,0,0]}>
+                      {sentimentDist.map((e, i) => <Cell key={i} fill={SENTIMENT_COLORS[e.s]} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+            </div>
+
+            {/* 댓글 미리보기 카드 */}
+            <Card>
+              <SectionTitle>실제 댓글 반응 미리보기 ({postsWithComments.length}건)</SectionTitle>
+              {postsWithComments.length === 0 ? (
+                <p className="text-[#444] text-sm">댓글 데이터가 없습니다. Instagram 시트에 firstComment 컬럼을 확인하세요.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
+                  {postsWithComments.map((p, i) => (
+                    <a key={i} href={p.url || "#"} target="_blank" rel="noopener noreferrer"
+                      className="flex gap-3 p-3 rounded-xl border border-[#2a2a3a] hover:border-[#6366f1] transition-colors bg-[#0c0c10]">
+                      {/* 썸네일 */}
+                      <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-[#1e1e28]">
+                        {p.displayUrl ? (
+                          <img src={p.displayUrl} alt="" className="w-full h-full object-cover"
+                            onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xl text-[#333]">🖼</div>
+                        )}
+                      </div>
+                      {/* 텍스트 */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[11px] font-semibold text-[#aaa]">@{p.owner}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                            style={{ background: SENTIMENT_COLORS[p.sentiment] + "22", color: SENTIMENT_COLORS[p.sentiment] }}>
+                            {p.sentiment}
+                          </span>
+                          <span className="text-[10px] text-[#444] ml-auto">{p.date.slice(5)}</span>
+                        </div>
+                        {/* 첫 댓글 */}
+                        <p className="text-xs text-[#ccc] leading-relaxed line-clamp-2">
+                          💬 {p.firstComment}
+                        </p>
+                        {/* 감성 키워드 */}
+                        {p.sentimentKeywords.length > 0 && (
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {p.sentimentKeywords.slice(0, 4).map((kw, j) => (
+                              <span key={j} className="text-[9px] px-1.5 py-0.5 rounded"
+                                style={{ background: SENTIMENT_COLORS[p.sentiment] + "22", color: SENTIMENT_COLORS[p.sentiment] }}>
+                                {kw}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {/* 좋아요 */}
+                        <p className="text-[10px] text-[#444] mt-1">❤️ {p.likes.toLocaleString()}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </Card>
           </div>
         )}
 
