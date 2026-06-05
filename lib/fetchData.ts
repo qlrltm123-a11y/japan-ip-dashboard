@@ -66,30 +66,44 @@ export function analyzeSentiment(text: string): { sentiment: Post["sentiment"]; 
 
 // ── 캠페인 감지 규칙 ──────────────────────────────────────────────────────────
 // ── 캠페인 감지 규칙 ──────────────────────────────────────────────────────────
-// required: 하나 이상 반드시 포함 / optional: 하나라도 있으면 추가 점수 (미래 확장용)
-export const CAMPAIGN_RULES: { name: string; required: string[]; boost?: string[] }[] = [
+// mustMatch: 그룹마다 하나씩 반드시 매칭 (AND 조건)
+// 예) mustMatch = [[브랜드명들], [제품명들]] → 브랜드명 중 하나 AND 제품명 중 하나 동시 포함 시 분류
+export const CAMPAIGN_RULES: {
+  name: string
+  mustMatch: string[][]   // 각 배열에서 최소 1개씩 모두 매칭돼야 함 (AND)
+}[] = [
   {
     name: "ウェイクメイク_平成ギャルエディション",
-    // 반드시 브랜드명이 있어야 함 — 平成ギャル 단독은 오탐이므로 제외
-    required: ["ウェイクメイク", "웨이크메이크", "wakemake", "ウェイクメイクギャル"],
-    boost: ["平成ギャル", "ギャルエディション"],
+    mustMatch: [
+      ["ウェイクメイク", "웨이크메이크", "wakemake"],          // ① 브랜드
+      ["平成ギャル", "ギャルエディション", "헤이세이갸루", "gyaledition"], // ② 제품
+    ],
   },
   {
     name: "カラーグラム_ギャルしんちゃんコレクション",
-    // しんちゃん 단독은 오탐 가능 → カラーグラム 계열 브랜드명 필수
-    required: ["カラーグラム", "컬러그램", "colorgram"],
-    boost: ["ギャルしんちゃん", "しんちゃん", "갸루신짱"],
+    mustMatch: [
+      ["カラーグラム", "컬러그램", "colorgram"],                        // ① 브랜드
+      ["ギャルしんちゃん", "しんちゃんコレクション", "クレヨンしんちゃん", "갸루신짱"], // ② 제품
+    ],
   },
   // ↓ 새 캠페인 추가 예시
-  // { name: "캠페인명", required: ["브랜드명"], boost: ["부가키워드"] },
+  // {
+  //   name: "브랜드_캠페인명",
+  //   mustMatch: [
+  //     ["브랜드명1", "브랜드명2"],   // 브랜드 그룹
+  //     ["캠페인명1", "캠페인명2"],   // 캠페인 그룹
+  //   ],
+  // },
 ]
 
 function detectIP(caption: string, hashtags: string[]): string {
   const text = (caption + " " + hashtags.join(" ")).toLowerCase()
   for (const rule of CAMPAIGN_RULES) {
-    // required 중 하나라도 있으면 해당 캠페인으로 분류
-    const hit = rule.required.some(kw => text.includes(kw.toLowerCase()))
-    if (hit) return rule.name
+    // 모든 그룹에서 최소 1개씩 매칭돼야 해당 캠페인으로 분류 (AND 조건)
+    const allGroupsMatch = rule.mustMatch.every(group =>
+      group.some(kw => text.includes(kw.toLowerCase()))
+    )
+    if (allGroupsMatch) return rule.name
   }
   const commonKws = ["コラボ", "collab", "collaboration", "콜라보"]
   for (const kw of commonKws) {
