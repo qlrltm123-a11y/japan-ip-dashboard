@@ -7,7 +7,7 @@ import {
   LineChart, Line, Legend, Cell,
 } from "recharts"
 import type { Post } from "@/lib/fetchData"
-import { CAMPAIGN_RULES } from "@/lib/fetchData"
+import { CAMPAIGN_RULES, isCampaignPost } from "@/lib/fetchData"
 
 // ── 색상 팔레트 ──────────────────────────────────────────────────────────────
 const CAMPAIGN_COLORS = [
@@ -267,9 +267,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                 borderColor: jpOnly ? "#6366f155" : "#2a2a3a",
                 color: jpOnly ? "#818cf8" : "#555",
               }}>
-              🎯 {jpOnly
-                ? `캠페인 매칭 (${posts.length})`
-                : `일본어 전체 (${allPosts.length})`}
+              🎯 {jpOnly ? (
+                <>캠페인 <span style={{color:"#34d399"}}>확정 {posts.filter(p=>p.matchLevel==="확정").length}</span> · <span style={{color:"#f59e0b"}}>추정 {posts.filter(p=>p.matchLevel==="추정").length}</span></>
+              ) : `일본어 전체 (${allPosts.length})`}
             </button>
             <span className="text-[11px] text-[#444]">
               {fetchedAt}
@@ -656,11 +656,20 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                       </span>
                     </div>
 
-                    {/* 캠페인 배지 */}
-                    {p.ipName !== "미분류" && p.ipName !== "기타_콜라보" && (
-                      <div className="absolute bottom-2 left-2 right-2 truncate px-2 py-0.5 rounded-md text-[9px] font-bold"
-                        style={{ background: getCampaignColor(p.ipName) + "cc", color: "#fff" }}>
-                        {p.ipName.split("_").pop()}
+                    {/* 캠페인 배지 + 확정/추정 */}
+                    {isCampaignPost(p.ipName) && (
+                      <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1">
+                        <div className="flex-1 truncate px-2 py-0.5 rounded-md text-[9px] font-bold"
+                          style={{ background: getCampaignColor(p.ipName) + "cc", color: "#fff" }}>
+                          {p.ipName.split("_").pop()}
+                        </div>
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0"
+                          style={{
+                            background: p.matchLevel === "확정" ? "#34d39933" : "#f59e0b33",
+                            color: p.matchLevel === "확정" ? "#34d399" : "#f59e0b",
+                          }}>
+                          {p.matchLevel}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -825,7 +834,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
               <table className="w-full text-xs">
                 <thead className="sticky top-0" style={{ background: "#16161d" }}>
                   <tr className="border-b border-[#2a2a3a]">
-                    {["날짜", "채널", "캠페인", "계정", "유형", "재생", "좋아요", "댓글", "링크"].map(h => (
+                    {["날짜", "채널", "캠페인", "매칭", "계정", "유형", "재생", "좋아요", "댓글", "링크"].map(h => (
                       <th key={h} className={`px-4 py-3 text-[10px] font-bold tracking-widest text-[#444] uppercase whitespace-nowrap ${h === "댓글" || h === "링크" ? "text-center" : "text-left"}`}>{h}</th>
                     ))}
                   </tr>
@@ -844,6 +853,15 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
                           style={{ background: getCampaignColor(p.ipName) + "22", color: getCampaignColor(p.ipName) }}>
                           {p.ipName.split("_").pop()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-center">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                          style={{
+                            background: p.matchLevel === "확정" ? "#34d39922" : "#f59e0b22",
+                            color: p.matchLevel === "확정" ? "#34d399" : "#f59e0b",
+                          }}>
+                          {p.matchLevel}
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-[#aaa] font-medium">@{p.owner}</td>

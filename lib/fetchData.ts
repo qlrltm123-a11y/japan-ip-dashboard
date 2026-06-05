@@ -6,6 +6,8 @@ const INSTAGRAM_CSV_URL =
 const TIKTOK_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vTzrniY-zmDRG9TRkZCmW-q6rGpvvORhGuq78-PsYmZh_BArUoY89b3ZutSy2srQ8PRz83NSirpBYNz/pub?output=csv"
 
+export type MatchLevel = "확정" | "추정" | "미분류"
+
 export interface Post {
   channel: "Instagram" | "TikTok"
   date: string
@@ -23,6 +25,7 @@ export interface Post {
   engagementRate: number
   contentType: string
   ipName: string
+  matchLevel: MatchLevel   // 확정: 모든 조건 충족 / 추정: 일부 충족 / 미분류
   sentiment: "긍정" | "부정" | "구매의도" | "중립"
   sentimentKeywords: string[]
   url: string
@@ -109,19 +112,33 @@ export const CAMPAIGN_RULES: {
   // },
 ]
 
-function detectIP(caption: string, hashtags: string[]): string {
+function detectIP(caption: string, hashtags: string[]): { ipName: string; matchLevel: MatchLevel } {
   const text = (caption + " " + hashtags.join(" ")).toLowerCase()
+
+  let bestMatch = { ipName: "미분류", matchLevel: "미분류" as MatchLevel, hitGroups: 0 }
+
   for (const rule of CAMPAIGN_RULES) {
-    // 모든 그룹에서 최소 1개씩 매칭돼야 해당 캠페인으로 분류 (AND 조건)
-    const allGroupsMatch = rule.mustMatch.every(group =>
+    const hitGroups = rule.mustMatch.filter(group =>
       group.some(kw => text.includes(kw.toLowerCase()))
-    )
-    if (allGroupsMatch) return rule.name
+    ).length
+    const totalGroups = rule.mustMatch.length
+
+    if (hitGroups === totalGroups) {
+      // 모든 그룹 충족 → 확정
+      return { ipName: rule.name, matchLevel: "확정" }
+    }
+    if (hitGroups >= 1 && hitGroups > bestMatch.hitGroups) {
+      // 일부 그룹 충족 → 추정 후보
+      bestMatch = { ipName: rule.name, matchLevel: "추정", hitGroups }
+    }
   }
-  return "미분류"
+
+  if (bestMatch.matchLevel === "추정") {
+    return { ipName: bestMatch.ipName, matchLevel: "추정" }
+  }
+  return { ipName: "미분류", matchLevel: "미분류" }
 }
 
-// 캠페인에 매칭된 게시물인지 여부
 export function isCampaignPost(ipName: string): boolean {
   return CAMPAIGN_RULES.some(r => r.name === ipName)
 }
@@ -179,6 +196,7 @@ function parseInstagram(rows: Record<string, string>[]): Post[] {
     const reactions = likes + comments
     const sentimentText = caption + " " + firstComment
     const { sentiment, keywords: sentimentKeywords } = analyzeSentiment(sentimentText)
+    const { ipName, matchLevel } = detectIP(caption, hashtags)
     return {
       channel: "Instagram" as const,
       date: (row["timestamp"] ?? "").split("T")[0],
@@ -195,7 +213,8 @@ function parseInstagram(rows: Record<string, string>[]): Post[] {
       impressions,
       engagementRate: impressions > 0 ? +((reactions / impressions) * 100).toFixed(2) : 0,
       contentType: row["type"]?.toLowerCase() === "video" ? "영상" : row["type"]?.toLowerCase() === "sidecar" ? "캐러셀" : "이미지",
-      ipName: detectIP(caption, hashtags),
+      ipName,
+      matchLevel,
       sentiment,
       sentimentKeywords,
       url: row["url"] ?? "",
@@ -219,6 +238,7 @@ function parseTikTok(rows: Record<string, string>[]): Post[] {
     const dateRaw   = row["createTime"] ?? row["createTimeISO"] ?? row["createdAt"] ?? ""
     const date      = dateRaw.length >= 10 ? dateRaw.slice(0, 10) : new Date(toNum(dateRaw) * 1000).toISOString().slice(0, 10)
     const { sentiment, keywords: sentimentKeywords } = analyzeSentiment(caption)
+    const { ipName, matchLevel } = detectIP(caption, hashtags)
     return {
       channel: "TikTok" as const,
       date,
@@ -235,7 +255,8 @@ function parseTikTok(rows: Record<string, string>[]): Post[] {
       impressions,
       engagementRate: impressions > 0 ? +((reactions / impressions) * 100).toFixed(2) : 0,
       contentType: "영상",
-      ipName: detectIP(caption, hashtags),
+      ipName,
+      matchLevel,
       sentiment,
       sentimentKeywords,
       url: row["webVideoUrl"] ?? row["url"] ?? "",
@@ -259,9 +280,9 @@ export async function fetchPosts(): Promise<{ posts: Post[]; allPosts: Post[] }>
   const ttPosts = parseTikTok(ttRows)
 
   const allRaw   = [...igPosts, ...ttPosts].sort((a, b) => b.date.localeCompare(a.date))
-  const allPosts = dedup(allRaw)                                                    // 중복 제거
-  const jpPosts  = allPosts.filter(p => p.isJapanese)                              // 일본어만
-  const posts    = jpPosts.filter(p => isCampaignPost(p.ipName))                   // 캠페인 매칭만
+  const allPosts = dedup(allRaw)                                                          // 중복 제거
+  const jpPosts  = allPosts.filter(p => p.isJapanese)                                    // 일본어만
+  const posts    = jpPosts.filter(p => p.matchLevel === "확정" || p.matchLevel === "추정") // 확정+추정만
 
   return { posts, allPosts: jpPosts }
 }
