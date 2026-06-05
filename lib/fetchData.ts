@@ -28,6 +28,7 @@ export interface Post {
   url: string
   displayUrl: string
   isVideo: boolean
+  isJapanese: boolean
 }
 
 // ── 감성 분석 키워드 ──────────────────────────────────────────────────────────
@@ -112,6 +113,22 @@ function detectIP(caption: string, hashtags: string[]): string {
   return "미분류"
 }
 
+// 일본어 문자 포함 여부 (히라가나·카타카나·한자)
+function hasJapanese(text: string): boolean {
+  return /[぀-ゟ゠-ヿ一-龯]/.test(text)
+}
+
+// URL 기준 중복 제거
+function dedup(posts: Post[]): Post[] {
+  const seen = new Set<string>()
+  return posts.filter(p => {
+    const key = p.url || `${p.owner}::${p.date}::${p.caption.slice(0, 30)}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 function proxyImg(url: string): string {
   if (!url) return ""
   return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=400&output=jpg`
@@ -171,6 +188,7 @@ function parseInstagram(rows: Record<string, string>[]): Post[] {
       url: row["url"] ?? "",
       displayUrl: proxyImg(row["displayUrl"] ?? row["images/0"] ?? ""),
       isVideo: row["type"]?.toLowerCase() === "video",
+      isJapanese: hasJapanese(caption + hashtags.join(" ")),
     }
   }).filter(p => p.date)
 }
@@ -213,11 +231,12 @@ function parseTikTok(rows: Record<string, string>[]): Post[] {
         row["thumbnailUrl"] ?? row["coverUrl"] ?? row["authorMeta/avatar"] ?? ""
       ),
       isVideo: true,
+      isJapanese: hasJapanese(caption + hashtags.join(" ")),
     }
   }).filter(p => p.date)
 }
 
-export async function fetchPosts(): Promise<Post[]> {
+export async function fetchPosts(): Promise<{ posts: Post[]; allPosts: Post[] }> {
   const [igRows, ttRows] = await Promise.all([
     fetchCSV(INSTAGRAM_CSV_URL),
     fetchCSV(TIKTOK_CSV_URL),
@@ -226,5 +245,9 @@ export async function fetchPosts(): Promise<Post[]> {
   const igPosts = parseInstagram(igRows)
   const ttPosts = parseTikTok(ttRows)
 
-  return [...igPosts, ...ttPosts].sort((a, b) => b.date.localeCompare(a.date))
+  const allRaw = [...igPosts, ...ttPosts].sort((a, b) => b.date.localeCompare(a.date))
+  const allPosts = dedup(allRaw)                      // 중복 제거
+  const posts = allPosts.filter(p => p.isJapanese)    // 일본어 게시물만
+
+  return { posts, allPosts }
 }

@@ -75,26 +75,29 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 }
 
 // ── 메인 ─────────────────────────────────────────────────────────────────────
-export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetchedAt: string }) {
+export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[]; allPosts: Post[]; fetchedAt: string }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [tab, setTab] = useState<Tab>("overview")
   const [selectedCampaign, setSelectedCampaign] = useState("전체")
   const [selectedChannel, setSelectedChannel] = useState<"전체" | "Instagram" | "TikTok">("전체")
   const [sortBy, setSortBy] = useState<"reactions" | "plays" | "comments">("reactions")
+  const [jpOnly, setJpOnly] = useState(true)
+
+  const basePosts = jpOnly ? posts : allPosts
 
   const refresh = useCallback(() => {
     startTransition(() => { router.refresh() })
   }, [router])
 
-  const igCount = posts.filter(p => p.channel === "Instagram").length
-  const ttCount = posts.filter(p => p.channel === "TikTok").length
+  const igCount = basePosts.filter(p => p.channel === "Instagram").length
+  const ttCount = basePosts.filter(p => p.channel === "TikTok").length
   const allCampaigns = ["전체", ...CAMPAIGN_RULES.map(r => r.name), "기타_콜라보", "미분류"]
 
-  const fp = useMemo(() => posts
+  const fp = useMemo(() => basePosts
     .filter(p => selectedCampaign === "전체" || p.ipName === selectedCampaign)
     .filter(p => selectedChannel === "전체" || p.channel === selectedChannel),
-  [posts, selectedCampaign, selectedChannel])
+  [basePosts, selectedCampaign, selectedChannel])
 
   const totalComments  = useMemo(() => fp.reduce((a, p) => a + p.comments, 0), [fp])
   const totalPlays     = useMemo(() => fp.reduce((a, p) => a + p.plays, 0), [fp])
@@ -223,12 +226,12 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
 
   // 댓글 있는 게시물 — 채널 필터 무관하게 IG 전체에서 가져옴
   const postsWithComments = useMemo(() =>
-    posts
+    basePosts
       .filter(p => selectedCampaign === "전체" || p.ipName === selectedCampaign)
       .filter(p => p.firstComment && p.firstComment.trim().length > 3)
       .sort((a, b) => b.likes - a.likes)
       .slice(0, 30),
-  [posts, selectedCampaign])
+  [basePosts, selectedCampaign])
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview",  label: "개요" },
@@ -252,9 +255,19 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap justify-end">
+            {/* 일본어 필터 토글 */}
+            <button onClick={() => setJpOnly(v => !v)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border"
+              style={{
+                background: jpOnly ? "#0d2e1a" : "#1e1e28",
+                borderColor: jpOnly ? "#34d39955" : "#2a2a3a",
+                color: jpOnly ? "#34d399" : "#555",
+              }}>
+              🇯🇵 {jpOnly ? `일본어만 (${posts.length})` : `전체 (${allPosts.length})`}
+            </button>
             <span className="text-[11px] text-[#444]">
-              {fetchedAt} 기준
+              {fetchedAt} · 중복 {allPosts.length - posts.length > 0 ? `${allPosts.length - posts.length}건 제거됨` : "없음"}
             </span>
             <button
               onClick={refresh}
@@ -302,7 +315,7 @@ export default function Dashboard({ posts, fetchedAt }: { posts: Post[]; fetched
         {/* 캠페인 필터 탭 */}
         <div className="max-w-7xl mx-auto px-6 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
           {allCampaigns.map((c) => {
-            const count = c === "전체" ? posts.length : posts.filter(p => p.ipName === c).length
+            const count = c === "전체" ? basePosts.length : basePosts.filter(p => p.ipName === c).length
             const isActive = selectedCampaign === c
             const color = c === "전체" ? "#6366f1" : getCampaignColor(c)
             const label = c === "전체" ? "전체" : (c.split("_").pop() ?? c)
