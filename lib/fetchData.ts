@@ -71,35 +71,41 @@ export function analyzeSentiment(text: string): { sentiment: Post["sentiment"]; 
 // 예) mustMatch = [[브랜드명들], [제품명들]] → 브랜드명 중 하나 AND 제품명 중 하나 동시 포함 시 분류
 export const CAMPAIGN_RULES: {
   name: string
-  mustMatch: string[][]   // 각 배열에서 최소 1개씩 모두 매칭돼야 함 (AND)
+  mustMatch: string[][]
+  // 각 배열에서 최소 1개씩 모두 매칭돼야 함 (AND)
+  // 그룹1: 한국 브랜드명, 그룹2: 일본 브랜드명, 그룹3: 콜라보/제품 키워드
 }[] = [
   {
     name: "ウェイクメイク_平成ギャルエディション",
     mustMatch: [
-      ["ウェイクメイク", "웨이크메이크", "wakemake"],          // ① 브랜드
-      ["平成ギャル", "ギャルエディション", "헤이세이갸루", "gyaledition"], // ② 제품
+      ["wakemake", "웨이크메이크"],                                    // ① 한국 브랜드명
+      ["ウェイクメイク"],                                               // ② 일본 브랜드명
+      ["平成ギャル", "ギャルエディション", "헤이세이갸루", "ギャルメイク"], // ③ 제품/콜라보 키워드
     ],
   },
   {
     name: "カラーグラム_ギャルしんちゃんコレクション",
     mustMatch: [
-      ["カラーグラム", "컬러그램", "colorgram"],
-      ["ギャルしんちゃん", "しんちゃんコレクション", "クレヨンしんちゃん", "갸루신짱"],
+      ["colorgram", "컬러그램"],                                              // ① 한국 브랜드명
+      ["カラーグラム"],                                                        // ② 일본 브랜드명
+      ["ギャルしんちゃん", "しんちゃんコレクション", "クレヨンしんちゃん", "갸루신짱"], // ③ 제품/콜라보 키워드
     ],
   },
   {
     name: "カラーグラム_立体創造シェーディングスティック",
     mustMatch: [
-      ["カラーグラム", "컬러그램", "colorgram"],
-      ["シェーディング", "シェーディングスティック", "ノーズシャドウ", "ノーズシェーディング", "立体創造", "シェーディングスティック"],
+      ["colorgram", "컬러그램"],                                                           // ① 한국 브랜드명
+      ["カラーグラム"],                                                                     // ② 일본 브랜드명
+      ["シェーディング", "シェーディングスティック", "ノーズシャドウ", "ノーズシェーディング", "立体創造"], // ③ 제품 키워드
     ],
   },
   // ↓ 새 캠페인 추가 예시
   // {
   //   name: "브랜드_캠페인명",
   //   mustMatch: [
-  //     ["브랜드명1", "브랜드명2"],
-  //     ["캠페인명1", "캠페인명2"],
+  //     ["한국브랜드명"],      // ① 한국 브랜드
+  //     ["日本ブランド名"],    // ② 일본 브랜드
+  //     ["콜라보키워드"],      // ③ 제품/콜라보
   //   ],
   // },
 ]
@@ -113,15 +119,12 @@ function detectIP(caption: string, hashtags: string[]): string {
     )
     if (allGroupsMatch) return rule.name
   }
-  // シェーディング 키워드만 있는 경우 → 트렌드 참고용으로 분류
-  const shadingKws = ["ノーズシャドウ", "ノーズシェーディング", "シェーディング"]
-  if (shadingKws.some(kw => text.includes(kw.toLowerCase()))) return "シェーディング_트렌드참고"
-
-  const commonKws = ["コラボ", "collab", "collaboration", "콜라보"]
-  for (const kw of commonKws) {
-    if (text.includes(kw.toLowerCase())) return "기타_콜라보"
-  }
   return "미분류"
+}
+
+// 캠페인에 매칭된 게시물인지 여부
+export function isCampaignPost(ipName: string): boolean {
+  return CAMPAIGN_RULES.some(r => r.name === ipName)
 }
 
 // 일본어 문자 포함 여부 (히라가나·카타카나·한자)
@@ -256,9 +259,10 @@ export async function fetchPosts(): Promise<{ posts: Post[]; allPosts: Post[] }>
   const igPosts = parseInstagram(igRows)
   const ttPosts = parseTikTok(ttRows)
 
-  const allRaw = [...igPosts, ...ttPosts].sort((a, b) => b.date.localeCompare(a.date))
-  const allPosts = dedup(allRaw)                      // 중복 제거
-  const posts = allPosts.filter(p => p.isJapanese)    // 일본어 게시물만
+  const allRaw   = [...igPosts, ...ttPosts].sort((a, b) => b.date.localeCompare(a.date))
+  const allPosts = dedup(allRaw)                                                    // 중복 제거
+  const jpPosts  = allPosts.filter(p => p.isJapanese)                              // 일본어만
+  const posts    = jpPosts.filter(p => isCampaignPost(p.ipName))                   // 캠페인 매칭만
 
-  return { posts, allPosts }
+  return { posts, allPosts: jpPosts }
 }

@@ -92,7 +92,10 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
 
   const igCount = basePosts.filter(p => p.channel === "Instagram").length
   const ttCount = basePosts.filter(p => p.channel === "TikTok").length
-  const allCampaigns = ["전체", ...CAMPAIGN_RULES.map(r => r.name), "기타_콜라보", "미분류"]
+  // 캠페인 모드: 정의된 캠페인만 / 전체 모드: 미분류 포함
+  const allCampaigns = jpOnly
+    ? ["전체", ...CAMPAIGN_RULES.map(r => r.name)]
+    : ["전체", ...CAMPAIGN_RULES.map(r => r.name), "기타_콜라보", "미분류"]
 
   const fp = useMemo(() => basePosts
     .filter(p => selectedCampaign === "전체" || p.ipName === selectedCampaign)
@@ -256,18 +259,20 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
           </div>
 
           <div className="flex items-center gap-3 flex-wrap justify-end">
-            {/* 일본어 필터 토글 */}
+            {/* 캠페인 매칭 필터 토글 */}
             <button onClick={() => setJpOnly(v => !v)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border"
               style={{
-                background: jpOnly ? "#0d2e1a" : "#1e1e28",
-                borderColor: jpOnly ? "#34d39955" : "#2a2a3a",
-                color: jpOnly ? "#34d399" : "#555",
+                background: jpOnly ? "#1a1040" : "#1e1e28",
+                borderColor: jpOnly ? "#6366f155" : "#2a2a3a",
+                color: jpOnly ? "#818cf8" : "#555",
               }}>
-              🇯🇵 {jpOnly ? `일본어만 (${posts.length})` : `전체 (${allPosts.length})`}
+              🎯 {jpOnly
+                ? `캠페인 매칭 (${posts.length})`
+                : `일본어 전체 (${allPosts.length})`}
             </button>
             <span className="text-[11px] text-[#444]">
-              {fetchedAt} · 중복 {allPosts.length - posts.length > 0 ? `${allPosts.length - posts.length}건 제거됨` : "없음"}
+              {fetchedAt}
             </span>
             <button
               onClick={refresh}
