@@ -83,16 +83,23 @@ export const CAMPAIGN_RULES: {
   {
     name: "カラーグラム_ギャルしんちゃんコレクション",
     mustMatch: [
-      ["カラーグラム", "컬러그램", "colorgram"],                        // ① 브랜드
-      ["ギャルしんちゃん", "しんちゃんコレクション", "クレヨンしんちゃん", "갸루신짱"], // ② 제품
+      ["カラーグラム", "컬러그램", "colorgram"],
+      ["ギャルしんちゃん", "しんちゃんコレクション", "クレヨンしんちゃん", "갸루신짱"],
+    ],
+  },
+  {
+    name: "カラーグラム_立体創造シェーディングスティック",
+    mustMatch: [
+      ["カラーグラム", "컬러그램", "colorgram"],
+      ["シェーディング", "シェーディングスティック", "ノーズシャドウ", "ノーズシェーディング", "立体創造", "シェーディングスティック"],
     ],
   },
   // ↓ 새 캠페인 추가 예시
   // {
   //   name: "브랜드_캠페인명",
   //   mustMatch: [
-  //     ["브랜드명1", "브랜드명2"],   // 브랜드 그룹
-  //     ["캠페인명1", "캠페인명2"],   // 캠페인 그룹
+  //     ["브랜드명1", "브랜드명2"],
+  //     ["캠페인명1", "캠페인명2"],
   //   ],
   // },
 ]
@@ -106,6 +113,10 @@ function detectIP(caption: string, hashtags: string[]): string {
     )
     if (allGroupsMatch) return rule.name
   }
+  // シェーディング 키워드만 있는 경우 → 트렌드 참고용으로 분류
+  const shadingKws = ["ノーズシャドウ", "ノーズシェーディング", "シェーディング"]
+  if (shadingKws.some(kw => text.includes(kw.toLowerCase()))) return "シェーディング_트렌드참고"
+
   const commonKws = ["コラボ", "collab", "collaboration", "콜라보"]
   for (const kw of commonKws) {
     if (text.includes(kw.toLowerCase())) return "기타_콜라보"
