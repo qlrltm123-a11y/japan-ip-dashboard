@@ -77,6 +77,7 @@ export const CAMPAIGN_RULES: {
 }[] = [
   {
     name: "wakemake_ハローキティブラックエディション",
+    // 이전 콜라보
     mustMatch: [
       ["wakemake", "웨이크메이크", "ウェイクメイク"],
       ["ハローキティブラックエディション", "ハローキティ", "헬로키티"],
@@ -84,6 +85,7 @@ export const CAMPAIGN_RULES: {
   },
   {
     name: "wakemake_平成ギャルエディション",
+    // 이번 콜라보
     mustMatch: [
       ["wakemake", "웨이크메이크", "ウェイクメイク"],
       ["平成ギャルエディション", "平成ギャル", "헤이세이갸루"],
