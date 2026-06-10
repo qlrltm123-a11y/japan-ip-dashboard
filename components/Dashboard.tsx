@@ -957,9 +957,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                           </span>
                           <span className="text-[10px] text-[#7d7d92] ml-auto">{p.date.slice(5)}</span>
                         </div>
-                        {/* 첫 댓글 */}
+                        {/* 첫 댓글 (한국어 번역) */}
                         <p className="text-xs text-[#e0e0e8] leading-relaxed line-clamp-2">
-                          💬 {p.firstComment}
+                          💬 {p.translatedComment || p.firstComment}
                         </p>
                         {/* 감성 키워드 */}
                         {p.sentimentKeywords.length > 0 && (

@@ -15,6 +15,7 @@ export interface Post {
   ownerFullName: string
   caption: string
   firstComment: string
+  translatedComment: string
   hashtags: string[]
   comments: number
   likes: number
@@ -217,6 +218,25 @@ async function fetchTikTokThumbnail(url: string): Promise<string> {
   }
 }
 
+// MyMemory 무료 번역 API로 일본어 댓글을 한국어로 번역 (1일 캐시)
+async function translateToKorean(text: string): Promise<string> {
+  const trimmed = text.trim()
+  if (!trimmed) return ""
+  try {
+    const res = await fetch(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(trimmed.slice(0, 480))}&langpair=ja|ko`,
+      { next: { revalidate: 86400 } }
+    )
+    if (!res.ok) return ""
+    const data = await res.json()
+    const translated = data?.responseData?.translatedText ?? ""
+    if (!translated || translated.toLowerCase().includes("invalid")) return ""
+    return translated
+  } catch {
+    return ""
+  }
+}
+
 // 동시 실행 개수를 제한하며 비동기 매핑
 async function mapWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
   let idx = 0
@@ -253,6 +273,7 @@ function parseInstagram(rows: Record<string, string>[]): Post[] {
       ownerFullName: row["ownerFullName"] ?? "",
       caption,
       firstComment,
+      translatedComment: "",
       hashtags,
       comments,
       likes,
@@ -295,6 +316,7 @@ function parseTikTok(rows: Record<string, string>[]): Post[] {
       ownerFullName: row["authorMeta/nickName"] ?? row["authorMeta.nickName"] ?? row["authorMeta.name"] ?? row["author/nickname"] ?? "",
       caption,
       firstComment: "",
+      translatedComment: "",
       hashtags,
       comments,
       likes,
@@ -338,6 +360,12 @@ export async function fetchPosts(): Promise<{ posts: Post[]; allPosts: Post[] }>
   await mapWithConcurrency(ttConfirmed, 8, async (p) => {
     const thumb = await fetchTikTokThumbnail(p.url)
     if (thumb) p.displayUrl = proxyImg(thumb)
+  })
+
+  // 첫 댓글이 있는 게시물은 한국어로 번역
+  const withComments = posts.filter(p => p.firstComment && p.firstComment.trim().length > 3)
+  await mapWithConcurrency(withComments, 5, async (p) => {
+    p.translatedComment = await translateToKorean(p.firstComment)
   })
 
   return { posts, allPosts: jpPosts }
