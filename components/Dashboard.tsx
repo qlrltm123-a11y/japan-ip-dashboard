@@ -275,6 +275,40 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
     brandFiltered.filter(p => selectedChannel === "전체" || p.channel === selectedChannel),
   [brandFiltered, selectedChannel])
 
+  // 이전 vs 이번 콜라보 댓글 감성 비교 (채널 필터만 적용, 캠페인 필터 무관)
+  const sentimentCompare = useMemo(() => {
+    const SENTIMENTS = ["구매의도", "긍정", "중립", "부정"] as const
+    const calcSentiment = (name: string) => {
+      const ps = compareBase.filter(p => p.ipName === name)
+      const total = ps.length
+      const map: Record<string, number> = { "구매의도": 0, "긍정": 0, "중립": 0, "부정": 0 }
+      ps.forEach(p => { map[p.sentiment] = (map[p.sentiment] ?? 0) + 1 })
+      return { total, dist: SENTIMENTS.map(s => ({ s, count: map[s], pct: total > 0 ? Math.round(map[s] / total * 100) : 0 })) }
+    }
+    const calcKeywords = (name: string) => {
+      const ps = compareBase.filter(p => p.ipName === name)
+      const map: Record<string, number> = {}
+      ps.forEach(p => p.sentimentKeywords.forEach(kw => { map[kw] = (map[kw] ?? 0) + 1 }))
+      return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([kw, count]) => ({ kw, count }))
+    }
+    return BRAND_COMPARISONS
+      .filter(({ brand }) => selectedBrand === "전체" || brand === selectedBrand)
+      .map(({ brand, prevName, currName }) => {
+        const prev = calcSentiment(prevName)
+        const curr = calcSentiment(currName)
+        const chartData = SENTIMENTS.map((s, i) => ({
+          s, 이전: prev.dist[i].pct, 이번: curr.dist[i].pct,
+        }))
+        return {
+          brand, prevName, currName,
+          prevTotal: prev.total, currTotal: curr.total,
+          chartData,
+          prevKeywords: calcKeywords(prevName),
+          currKeywords: calcKeywords(currName),
+        }
+      })
+  }, [compareBase, selectedBrand])
+
   const brandStats = useMemo(() => {
     const calc = (name: string) => {
       const ps = compareBase.filter(p => p.ipName === name)
@@ -945,6 +979,70 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                 </ResponsiveContainer>
               </Card>
             </div>
+
+            {/* 이전 vs 이번 콜라보 댓글 감성 비교 */}
+            {sentimentCompare.map(cmp => (
+              <Card key={cmp.brand}>
+                <SectionTitle>{cmp.brand.toUpperCase()} — 댓글 감성 비교 (이전 vs 이번)</SectionTitle>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2 text-[11px]">
+                      <span className="flex items-center gap-1 font-bold" style={{ color: "#9ca3af" }}>
+                        <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: "#6b7280" }} />
+                        {getCampaignLabel(cmp.prevName)} ({cmp.prevTotal}건)
+                      </span>
+                      <span className="flex items-center gap-1 font-bold" style={{ color: getCampaignColor(cmp.currName) }}>
+                        <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: getCampaignColor(cmp.currName) }} />
+                        {getCampaignLabel(cmp.currName)} ({cmp.currTotal}건)
+                      </span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={cmp.chartData} barSize={28}>
+                        <XAxis dataKey="s" stroke="#454659" tick={{ fill: "#b0b0c0", fontSize: 12 }} axisLine={false} tickLine={false} />
+                        <YAxis stroke="#454659" tick={{ fill: "#9494a8", fontSize: 11 }} axisLine={false} tickLine={false} unit="%" />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} formatter={(v: number) => `${v}%`} />
+                        <Bar dataKey="이전" name={getCampaignLabel(cmp.prevName)} fill="#6b7280" radius={[6,6,0,0]} />
+                        <Bar dataKey="이번" name={getCampaignLabel(cmp.currName)} fill={getCampaignColor(cmp.currName)} radius={[6,6,0,0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* 반응 키워드 비교 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold text-[#9ca3af] mb-2">{getCampaignLabel(cmp.prevName)} 키워드</p>
+                      {cmp.prevKeywords.length === 0 ? (
+                        <p className="text-[#7d7d92] text-xs">키워드 없음</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {cmp.prevKeywords.map(({ kw, count }, j) => (
+                            <span key={j} className="text-[10px] px-2 py-1 rounded-full font-semibold"
+                              style={{ background: "#6b728022", color: "#9ca3af", border: "1px solid #6b728033" }}>
+                              {kw} <span className="opacity-60">{count}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold mb-2" style={{ color: getCampaignColor(cmp.currName) }}>{getCampaignLabel(cmp.currName)} 키워드</p>
+                      {cmp.currKeywords.length === 0 ? (
+                        <p className="text-[#7d7d92] text-xs">키워드 없음</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {cmp.currKeywords.map(({ kw, count }, j) => (
+                            <span key={j} className="text-[10px] px-2 py-1 rounded-full font-semibold"
+                              style={{ background: getCampaignColor(cmp.currName) + "22", color: getCampaignColor(cmp.currName), border: `1px solid ${getCampaignColor(cmp.currName)}33` }}>
+                              {kw} <span className="opacity-60">{count}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
 
             {/* 댓글 미리보기 카드 */}
             <Card>
