@@ -95,6 +95,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
   const [selectedChannel, setSelectedChannel] = useState<"전체" | "Instagram" | "TikTok" | "YouTube">("전체")
   const [selectedBrand, setSelectedBrand] = useState<"전체" | "wakemake" | "colorgram">("전체")
   const [sortBy, setSortBy] = useState<"reactions" | "plays" | "comments">("reactions")
+  const [showAllPosts, setShowAllPosts] = useState(false)
   const [jpOnly, setJpOnly] = useState(true)
 
   const basePosts = jpOnly ? posts : allPosts
@@ -237,9 +238,13 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
     return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([tag, count]) => ({ tag, count }))
   }, [fp])
 
-  const topPosts = useMemo(
-    () => [...fp].sort((a, b) => b[sortBy] - a[sortBy]).slice(0, 20),
+  const sortedPosts = useMemo(
+    () => [...fp].sort((a, b) => b[sortBy] - a[sortBy]),
     [fp, sortBy]
+  )
+  const topPosts = useMemo(
+    () => showAllPosts ? sortedPosts : sortedPosts.slice(0, 20),
+    [sortedPosts, showAllPosts]
   )
 
   // 감성 분포
@@ -786,7 +791,16 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                   {s === "reactions" ? "🔥 반응 순" : s === "plays" ? "▶ 재생 순" : "💬 댓글 순"}
                 </button>
               ))}
-              <span className="ml-auto text-[11px] text-[#7d7d92]">상위 20건</span>
+              <span className="ml-auto text-[11px] text-[#7d7d92]">
+                {showAllPosts ? `전체 ${sortedPosts.length}건` : `상위 20건 (전체 ${sortedPosts.length}건)`}
+              </span>
+              {sortedPosts.length > 20 && (
+                <button onClick={() => setShowAllPosts(v => !v)}
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
+                  style={{ border: "1px solid #34354a", color: "#818cf8" }}>
+                  {showAllPosts ? "상위 20건만 보기" : "전체 보기"}
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
