@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useCallback, useTransition } from "react"
+import { useMemo, useState, useCallback, useEffect, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -87,6 +87,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
   const [tab, setTab] = useState<Tab>("overview")
   const [selectedCampaign, setSelectedCampaign] = useState("전체")
   const [selectedChannel, setSelectedChannel] = useState<"전체" | "Instagram" | "TikTok">("전체")
+  const [selectedBrand, setSelectedBrand] = useState<"전체" | "wakemake" | "colorgram">("전체")
   const [sortBy, setSortBy] = useState<"reactions" | "plays" | "comments">("reactions")
   const [jpOnly, setJpOnly] = useState(true)
 
@@ -96,17 +97,30 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
     startTransition(() => { router.refresh() })
   }, [router])
 
-  const igCount = basePosts.filter(p => p.channel === "Instagram").length
-  const ttCount = basePosts.filter(p => p.channel === "TikTok").length
+  const brandFiltered = useMemo(() =>
+    basePosts.filter(p => selectedBrand === "전체" || p.ipName.startsWith(selectedBrand + "_")),
+  [basePosts, selectedBrand])
+
+  const igCount = brandFiltered.filter(p => p.channel === "Instagram").length
+  const ttCount = brandFiltered.filter(p => p.channel === "TikTok").length
   // 캠페인 모드: 정의된 캠페인만 / 전체 모드: 미분류 포함
-  const allCampaigns = jpOnly
+  const allCampaigns = (jpOnly
     ? ["전체", ...CAMPAIGN_RULES.map(r => r.name)]
     : ["전체", ...CAMPAIGN_RULES.map(r => r.name), "기타_콜라보", "미분류"]
+  ).filter(c => c === "전체" || selectedBrand === "전체" || c.startsWith(selectedBrand + "_"))
 
-  const fp = useMemo(() => basePosts
+  // 브랜드 변경 시 더 이상 유효하지 않은 캠페인 선택 초기화
+  useEffect(() => {
+    if (selectedCampaign !== "전체" && !allCampaigns.includes(selectedCampaign)) {
+      setSelectedCampaign("전체")
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBrand])
+
+  const fp = useMemo(() => brandFiltered
     .filter(p => selectedCampaign === "전체" || p.ipName === selectedCampaign)
     .filter(p => selectedChannel === "전체" || p.channel === selectedChannel),
-  [basePosts, selectedCampaign, selectedChannel])
+  [brandFiltered, selectedCampaign, selectedChannel])
 
   const totalComments  = useMemo(() => fp.reduce((a, p) => a + p.comments, 0), [fp])
   const totalPlays     = useMemo(() => fp.reduce((a, p) => a + p.plays, 0), [fp])
@@ -237,17 +251,17 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
 
   // 댓글 있는 게시물 — 채널 필터 무관하게 IG 전체에서 가져옴
   const postsWithComments = useMemo(() =>
-    basePosts
+    brandFiltered
       .filter(p => selectedCampaign === "전체" || p.ipName === selectedCampaign)
       .filter(p => p.firstComment && p.firstComment.trim().length > 3)
       .sort((a, b) => b.likes - a.likes)
       .slice(0, 30),
-  [basePosts, selectedCampaign])
+  [brandFiltered, selectedCampaign])
 
   // 채널 필터만 적용한 비교용 모집단 (캠페인 필터와 무관하게 이전/이번을 동시에 비교)
   const compareBase = useMemo(() =>
-    basePosts.filter(p => selectedChannel === "전체" || p.channel === selectedChannel),
-  [basePosts, selectedChannel])
+    brandFiltered.filter(p => selectedChannel === "전체" || p.channel === selectedChannel),
+  [brandFiltered, selectedChannel])
 
   const brandStats = useMemo(() => {
     const calc = (name: string) => {
@@ -266,18 +280,20 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
         maxDate: dates[dates.length - 1] ?? "-",
       }
     }
-    return BRAND_COMPARISONS.map(({ brand, prevName, currName }) => {
-      const prev = calc(prevName)
-      const curr = calc(currName)
-      const change = prev.avgReactions > 0
-        ? Math.round((curr.avgReactions - prev.avgReactions) / prev.avgReactions * 100)
-        : null
-      const countChange = prev.count > 0
-        ? Math.round((curr.count - prev.count) / prev.count * 100)
-        : null
-      return { brand, prev, curr, change, countChange }
-    })
-  }, [compareBase])
+    return BRAND_COMPARISONS
+      .filter(({ brand }) => selectedBrand === "전체" || brand === selectedBrand)
+      .map(({ brand, prevName, currName }) => {
+        const prev = calc(prevName)
+        const curr = calc(currName)
+        const change = prev.avgReactions > 0
+          ? Math.round((curr.avgReactions - prev.avgReactions) / prev.avgReactions * 100)
+          : null
+        const countChange = prev.count > 0
+          ? Math.round((curr.count - prev.count) / prev.count * 100)
+          : null
+        return { brand, prev, curr, change, countChange }
+      })
+  }, [compareBase, selectedBrand])
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview",  label: "개요" },
@@ -298,11 +314,26 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
             <span className="text-xl">🇯🇵</span>
             <div>
               <h1 className="text-sm font-bold text-[#f0f0f6] leading-none">일본 IP 콜라보 대시보드</h1>
-              <p className="text-[10px] text-[#7d7d92] mt-0.5">Instagram · {posts.length}건 수집</p>
+              <p className="text-[10px] text-[#7d7d92] mt-0.5">Instagram · TikTok · {brandFiltered.length}건 수집</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap justify-end">
+            {/* 브랜드 선택 */}
+            {(["전체", "wakemake", "colorgram"] as const).map(b => {
+              const isActive = selectedBrand === b
+              return (
+                <button key={b} onClick={() => setSelectedBrand(b)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border"
+                  style={{
+                    background: isActive ? "#312e81" : "#23242f",
+                    borderColor: isActive ? "#6366f1" : "#34354a",
+                    color: isActive ? "#c7d2fe" : "#9494a8",
+                  }}>
+                  {b === "전체" ? "🏷️ 전체" : b === "wakemake" ? "💄 wakemake" : "🎨 colorgram"}
+                </button>
+              )
+            })}
             {/* 캠페인 매칭 필터 토글 */}
             <button onClick={() => setJpOnly(v => !v)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border"
@@ -312,7 +343,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                 color: jpOnly ? "#818cf8" : "#9494a8",
               }}>
               🎯 {jpOnly ? (
-                <>캠페인 <span style={{color:"#34d399"}}>확정 {posts.length}</span></>
+                <>캠페인 <span style={{color:"#34d399"}}>확정 {brandFiltered.length}</span></>
               ) : `일본어 전체 (${allPosts.length})`}
             </button>
             <span className="text-[11px] text-[#7d7d92]">
@@ -343,7 +374,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
         {/* 채널 선택 */}
         <div className="max-w-7xl mx-auto px-6 pb-2 flex gap-2">
           {(["전체", "Instagram", "TikTok"] as const).map(ch => {
-            const count = ch === "전체" ? posts.length : ch === "Instagram" ? igCount : ttCount
+            const count = ch === "전체" ? brandFiltered.length : ch === "Instagram" ? igCount : ttCount
             const color = ch === "전체" ? "#6366f1" : CHANNEL_COLORS[ch]
             const isActive = selectedChannel === ch
             return (
@@ -364,7 +395,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
         {/* 캠페인 필터 탭 */}
         <div className="max-w-7xl mx-auto px-6 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
           {allCampaigns.map((c) => {
-            const count = c === "전체" ? basePosts.length : basePosts.filter(p => p.ipName === c).length
+            const count = c === "전체" ? brandFiltered.length : brandFiltered.filter(p => p.ipName === c).length
             const isActive = selectedCampaign === c
             const color = c === "전체" ? "#6366f1" : getCampaignColor(c)
             const label = c === "전체" ? "전체" : getCampaignLabel(c)
