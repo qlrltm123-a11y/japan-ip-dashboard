@@ -78,44 +78,46 @@ export function analyzeSentiment(text: string): { sentiment: Post["sentiment"]; 
 export const CAMPAIGN_RULES: {
   name: string
   mustMatch: string[][]
-  // 이 키워드가 caption에 있으면 이 룰은 매칭 제외 (이번/이전 캐릭터가 겹치는 경우 구분용)
-  exclude?: string[]
 }[] = [
   {
     name: "wakemake_平成ギャルエディション",
-    // 이번 콜라보 (헬로키티 × 헤이세이갸루 에디션) - 먼저 체크
+    // 헬로키티 콜라보 (이전/이번 모두 헬로키티 캐릭터 사용 → 게시 시기로 구분)
     mustMatch: [
       ["wakemake", "웨이크메이크", "ウェイクメイク"],
-      ["平成ギャルエディション", "平成ギャル", "헤이세이갸루"],
+      ["ハローキティ", "헬로키티", "平成ギャル", "헤이세이갸루", "ブラックエディション", "블랙에디션"],
     ],
   },
   {
     name: "wakemake_ハローキティブラックエディション",
-    // 이전 콜라보 (헬로키티 블랙 에디션) - 平成ギャル 언급 시 이번 콜라보로 간주
     mustMatch: [
       ["wakemake", "웨이크메이크", "ウェイクメイク"],
-      ["ハローキティブラックエディション", "ブラックエディション", "ハローキティ", "헬로키티", "블랙에디션"],
+      ["ハローキティ", "헬로키티", "平成ギャル", "헤이세이갸루", "ブラックエディション", "블랙에디션"],
     ],
-    exclude: ["平成ギャルエディション", "平成ギャル", "헤이세이갸루"],
   },
   {
     name: "colorgram_ギャルしんちゃんコラボ",
-    // 이번 콜라보 (갸루 신짱) - 먼저 체크
+    // 짱구 콜라보 (이전/이번 모두 짱구 캐릭터 사용 → 게시 시기로 구분). colorgram/카라구람 브랜드명 필수
     mustMatch: [
       ["colorgram", "컬러그램", "カラーグラム"],
-      ["ギャルしんちゃんコラボ", "ギャルしんちゃんコレクション", "ギャルしんちゃん", "갸루신짱", "ギャル", "갸루"],
+      ["しんちゃん", "짱구", "クレヨン", "クレヨンしんちゃん", "ギャルしんちゃん"],
     ],
   },
   {
     name: "colorgram_クレヨンしんちゃんコラボ",
-    // 이전 콜라보 - ギャル 언급 시 이번 콜라보로 간주
     mustMatch: [
       ["colorgram", "컬러그램", "カラーグラム"],
-      ["クレヨンしんちゃんコラボ", "クレヨンリップ", "クレヨンしんちゃん"],
+      ["しんちゃん", "짱구", "クレヨン", "クレヨンしんちゃん", "ギャルしんちゃん"],
     ],
-    exclude: ["ギャルしんちゃんコラボ", "ギャルしんちゃんコレクション", "ギャルしんちゃん", "갸루신짱", "ギャル", "갸루"],
   },
 ]
+
+// 같은 캐릭터를 쓰는 이전/이번 콜라보를 게시 연도로 구분 (이전: ~2025년, 이번: 2026년~)
+const CAMPAIGN_PERIOD_PAIRS: Record<string, { prev: string; curr: string }> = {
+  "wakemake_ハローキティブラックエディション": { prev: "wakemake_ハローキティブラックエディション", curr: "wakemake_平成ギャルエディション" },
+  "wakemake_平成ギャルエディション": { prev: "wakemake_ハローキティブラックエディション", curr: "wakemake_平成ギャルエディション" },
+  "colorgram_クレヨンしんちゃんコラボ": { prev: "colorgram_クレヨンしんちゃんコラボ", curr: "colorgram_ギャルしんちゃんコラボ" },
+  "colorgram_ギャルしんちゃんコラボ": { prev: "colorgram_クレヨンしんちゃんコラボ", curr: "colorgram_ギャルしんちゃんコラボ" },
+}
 
 // 화면 표시용 한글 라벨 (매칭 로직은 위 일본어 캠페인명 기준 그대로 사용)
 export const CAMPAIGN_LABELS: Record<string, string> = {
@@ -131,21 +133,24 @@ export function getCampaignLabel(name: string): string {
   return CAMPAIGN_LABELS[name] ?? (name.split("_").pop() ?? name)
 }
 
-function detectIP(caption: string, hashtags: string[]): { ipName: string; matchLevel: MatchLevel } {
+function detectIP(caption: string, hashtags: string[], date: string): { ipName: string; matchLevel: MatchLevel } {
   const text = (caption + " " + hashtags.join(" ")).toLowerCase()
 
   let bestMatch = { ipName: "미분류", matchLevel: "미분류" as MatchLevel, hitGroups: 0 }
 
   for (const rule of CAMPAIGN_RULES) {
-    if (rule.exclude?.some(kw => text.includes(kw.toLowerCase()))) continue
-
     const hitGroups = rule.mustMatch.filter(group =>
       group.some(kw => text.includes(kw.toLowerCase()))
     ).length
     const totalGroups = rule.mustMatch.length
 
     if (hitGroups === totalGroups) {
-      // 모든 그룹 충족 → 확정
+      // 모든 그룹 충족 → 확정. 이전/이번 콜라보는 게시 연도로 구분 (이전: ~2025, 이번: 2026~)
+      const pair = CAMPAIGN_PERIOD_PAIRS[rule.name]
+      if (pair) {
+        const year = parseInt(date.slice(0, 4), 10)
+        return { ipName: year >= 2026 ? pair.curr : pair.prev, matchLevel: "확정" }
+      }
       return { ipName: rule.name, matchLevel: "확정" }
     }
     if (hitGroups >= 1 && hitGroups > bestMatch.hitGroups) {
@@ -275,10 +280,11 @@ function parseInstagram(rows: Record<string, string>[]): Post[] {
     const reactions = likes + comments
     const sentimentText = caption + " " + firstComment
     const { sentiment, keywords: sentimentKeywords } = analyzeSentiment(sentimentText)
-    const { ipName, matchLevel } = detectIP(caption, hashtags)
+    const date = (row["timestamp"] ?? "").split("T")[0]
+    const { ipName, matchLevel } = detectIP(caption, hashtags, date)
     return {
       channel: "Instagram" as const,
-      date: (row["timestamp"] ?? "").split("T")[0],
+      date,
       owner: row["ownerUsername"] ?? "",
       ownerFullName: row["ownerFullName"] ?? "",
       caption,
@@ -318,7 +324,7 @@ function parseTikTok(rows: Record<string, string>[]): Post[] {
     const dateRaw   = row["createTime"] ?? row["createTimeISO"] ?? row["createdAt"] ?? ""
     const date      = dateRaw.length >= 10 ? dateRaw.slice(0, 10) : new Date(toNum(dateRaw) * 1000).toISOString().slice(0, 10)
     const { sentiment, keywords: sentimentKeywords } = analyzeSentiment(caption)
-    const { ipName, matchLevel } = detectIP(caption, hashtags)
+    const { ipName, matchLevel } = detectIP(caption, hashtags, date)
     return {
       channel: "TikTok" as const,
       date,
@@ -362,7 +368,7 @@ function parseYouTube(rows: Record<string, string>[]): Post[] {
     const hashtags  = (caption.match(/#[\w　-鿿가-힣]+/g) ?? []).slice(0, 8)
     const date      = (row["date"] ?? "").split("T")[0]
     const { sentiment, keywords: sentimentKeywords } = analyzeSentiment(caption)
-    const { ipName, matchLevel } = detectIP(caption, hashtags)
+    const { ipName, matchLevel } = detectIP(caption, hashtags, date)
     return {
       channel: "YouTube" as const,
       date,
