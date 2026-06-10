@@ -409,7 +409,9 @@ export async function fetchPosts(): Promise<{ posts: Post[]; allPosts: Post[] }>
   const ttPosts = parseTikTok(ttRows)
   const ytPosts = parseYouTube(ytRows)
 
-  const allRaw   = [...igPosts, ...ttPosts, ...ytPosts].sort((a, b) => b.date.localeCompare(a.date))
+  const allRaw   = [...igPosts, ...ttPosts, ...ytPosts]
+    .filter(p => !p.owner.toLowerCase().includes("nonoharasayane"))                       // 무관 계정 제외
+    .sort((a, b) => b.date.localeCompare(a.date))
   const allPosts = dedup(allRaw)                                                          // 중복 제거
   const jpPosts  = allPosts.filter(p => p.isJapanese)                                    // 일본어만
   const posts    = jpPosts.filter(p => p.matchLevel === "확정") // 확정(브랜드+콜라보 키워드 모두 매칭)만

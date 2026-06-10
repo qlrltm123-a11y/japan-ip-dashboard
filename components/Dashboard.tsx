@@ -805,8 +805,8 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                     {/* 이미지 없을 때 캡션 미리보기 */}
                     <div className={`w-full h-full p-3 flex flex-col items-center justify-center text-center gap-2 ${p.displayUrl ? "hidden" : ""}`}>
                       <span className="text-2xl text-[#454659]">{p.isVideo ? "▶" : "🖼"}</span>
-                      <p className="text-[10px] text-[#a8a8ba] leading-relaxed line-clamp-5 break-words">
-                        {p.caption ? p.caption.slice(0, 90) : "내용 없음"}
+                      <p className="text-[10px] text-[#a8a8ba] leading-relaxed break-words whitespace-pre-wrap">
+                        {p.caption || "내용 없음"}
                       </p>
                     </div>
 
@@ -845,8 +845,8 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                   {/* 정보 */}
                   <div className="p-3">
                     <p className="text-[11px] font-semibold text-[#e0e0e8] truncate">@{p.owner}</p>
-                    <p className="text-[10px] text-[#9494a8] line-clamp-2 mt-0.5 leading-relaxed">
-                      {p.caption.slice(0, 60)}
+                    <p className="text-[10px] text-[#9494a8] mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
+                      {p.caption}
                     </p>
                     <div className="flex gap-1 mt-1.5 flex-wrap">
                       {p.hashtags.slice(0, 2).map((h, j) => (
