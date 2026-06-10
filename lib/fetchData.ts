@@ -74,25 +74,29 @@ export function analyzeSentiment(text: string): { sentiment: Post["sentiment"]; 
 export const CAMPAIGN_RULES: {
   name: string
   mustMatch: string[][]
+  // 이 키워드가 caption에 있으면 이 룰은 매칭 제외 (이번/이전 캐릭터가 겹치는 경우 구분용)
+  exclude?: string[]
 }[] = [
   {
-    name: "wakemake_ハローキティブラックエディション",
-    // 이전 콜라보
-    mustMatch: [
-      ["wakemake", "웨이크메이크", "ウェイクメイク"],
-      ["ハローキティブラックエディション", "ハローキティ", "헬로키티"],
-    ],
-  },
-  {
     name: "wakemake_平成ギャルエディション",
-    // 이번 콜라보
+    // 이번 콜라보 (헬로키티 × 헤이세이갸루 에디션) - 먼저 체크
     mustMatch: [
       ["wakemake", "웨이크메이크", "ウェイクメイク"],
       ["平成ギャルエディション", "平成ギャル", "헤이세이갸루"],
     ],
   },
   {
+    name: "wakemake_ハローキティブラックエディション",
+    // 이전 콜라보 (헬로키티 블랙 에디션) - 平成ギャル 언급 시 이번 콜라보로 간주
+    mustMatch: [
+      ["wakemake", "웨이크메이크", "ウェイクメイク"],
+      ["ハローキティブラックエディション", "ブラックエディション", "ハローキティ", "헬로키티", "블랙에디션"],
+    ],
+    exclude: ["平成ギャルエディション", "平成ギャル", "헤이세이갸루"],
+  },
+  {
     name: "colorgram_ギャルしんちゃんコラボ",
+    // 이번 콜라보 (갸루 신짱) - 먼저 체크
     mustMatch: [
       ["colorgram", "컬러그램", "カラーグラム"],
       ["ギャルしんちゃんコラボ", "ギャルしんちゃんコレクション", "ギャルしんちゃん", "갸루신짱"],
@@ -100,10 +104,12 @@ export const CAMPAIGN_RULES: {
   },
   {
     name: "colorgram_クレヨンしんちゃんコラボ",
+    // 이전 콜라보 - ギャルしんちゃん 언급 시 이번 콜라보로 간주
     mustMatch: [
       ["colorgram", "컬러그램", "カラーグラム"],
       ["クレヨンしんちゃんコラボ", "クレヨンリップ", "クレヨンしんちゃん"],
     ],
+    exclude: ["ギャルしんちゃんコラボ", "ギャルしんちゃんコレクション", "ギャルしんちゃん", "갸루신짱"],
   },
 ]
 
@@ -127,6 +133,8 @@ function detectIP(caption: string, hashtags: string[]): { ipName: string; matchL
   let bestMatch = { ipName: "미분류", matchLevel: "미분류" as MatchLevel, hitGroups: 0 }
 
   for (const rule of CAMPAIGN_RULES) {
+    if (rule.exclude?.some(kw => text.includes(kw.toLowerCase()))) continue
+
     const hitGroups = rule.mustMatch.filter(group =>
       group.some(kw => text.includes(kw.toLowerCase()))
     ).length
