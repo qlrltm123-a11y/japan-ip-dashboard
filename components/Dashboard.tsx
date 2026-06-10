@@ -127,14 +127,16 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
   }, [fp])
 
   const byCampaign = useMemo(() => {
-    const map: Record<string, { reactions: number; likes: number; comments: number; plays: number; count: number }> = {}
+    const map: Record<string, { reactions: number; likes: number; comments: number; plays: number; count: number; minDate: string; maxDate: string }> = {}
     for (const p of fp) {
-      if (!map[p.ipName]) map[p.ipName] = { reactions: 0, likes: 0, comments: 0, plays: 0, count: 0 }
+      if (!map[p.ipName]) map[p.ipName] = { reactions: 0, likes: 0, comments: 0, plays: 0, count: 0, minDate: p.date, maxDate: p.date }
       map[p.ipName].reactions += p.reactions
       map[p.ipName].likes += p.likes
       map[p.ipName].comments += p.comments
       map[p.ipName].plays += p.plays
       map[p.ipName].count++
+      if (p.date < map[p.ipName].minDate) map[p.ipName].minDate = p.date
+      if (p.date > map[p.ipName].maxDate) map[p.ipName].maxDate = p.date
     }
     return Object.entries(map)
       .map(([name, v]) => ({
@@ -448,7 +450,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                 <table className="w-full text-xs mt-4">
                   <thead>
                     <tr className="border-b border-[#2a2a3a]">
-                      {["캠페인", "게시물", "총 좋아요", "총 댓글", "게시물당 반응", "TikTok 재생"].map(h => (
+                      {["캠페인", "투고 기간", "게시물", "총 좋아요", "총 댓글", "게시물당 반응", "TikTok 재생"].map(h => (
                         <th key={h} className={`py-2 text-[10px] font-bold text-[#444] uppercase tracking-wider ${h === "캠페인" ? "text-left" : "text-right"}`}>{h}</th>
                       ))}
                     </tr>
@@ -459,6 +461,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                         <td className="py-2.5 flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: getCampaignColor(row.fullName) }} />
                           <span className="text-[#ccc] truncate max-w-[120px]">{row.name}</span>
+                        </td>
+                        <td className="py-2.5 text-right text-[#666] whitespace-nowrap">
+                          {row.minDate.slice(2).replace(/-/g, ".")} ~ {row.maxDate.slice(2).replace(/-/g, ".")}
                         </td>
                         <td className="py-2.5 text-right text-[#888]">{row.count}</td>
                         <td className="py-2.5 text-right text-[#888]">{fmt(row.likes)}</td>
