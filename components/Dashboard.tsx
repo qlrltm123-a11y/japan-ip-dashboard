@@ -762,12 +762,15 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                     {p.displayUrl ? (
                       <img src={p.displayUrl} alt="" loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        onError={e => { (e.target as HTMLImageElement).parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center text-4xl">${p.isVideo ? "▶" : "🖼"}</div>` }} />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl text-[#454659]">
-                        {p.isVideo ? "▶" : "🖼"}
-                      </div>
-                    )}
+                        onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden") }} />
+                    ) : null}
+                    {/* 이미지 없을 때 캡션 미리보기 */}
+                    <div className={`w-full h-full p-3 flex flex-col items-center justify-center text-center gap-2 ${p.displayUrl ? "hidden" : ""}`}>
+                      <span className="text-2xl text-[#454659]">{p.isVideo ? "▶" : "🖼"}</span>
+                      <p className="text-[10px] text-[#a8a8ba] leading-relaxed line-clamp-5 break-words">
+                        {p.caption ? p.caption.slice(0, 90) : "내용 없음"}
+                      </p>
+                    </div>
 
                     {/* 오버레이 그라디언트 */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />

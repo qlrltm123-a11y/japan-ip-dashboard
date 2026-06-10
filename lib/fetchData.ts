@@ -189,6 +189,31 @@ async function fetchCSV(url: string): Promise<Record<string, string>[]> {
   }
 }
 
+// TikTok oEmbed API로 실제 영상 썸네일 조회 (1시간 캐시)
+async function fetchTikTokThumbnail(url: string): Promise<string> {
+  if (!url) return ""
+  try {
+    const res = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, { next: { revalidate: 3600 } })
+    if (!res.ok) return ""
+    const data = await res.json()
+    return data.thumbnail_url ?? ""
+  } catch {
+    return ""
+  }
+}
+
+// 동시 실행 개수를 제한하며 비동기 매핑
+async function mapWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let idx = 0
+  async function worker() {
+    while (idx < items.length) {
+      const cur = idx++
+      await fn(items[cur])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+}
+
 function parseInstagram(rows: Record<string, string>[]): Post[] {
   return rows.map((row) => {
     const caption = row["caption"] ?? ""
@@ -292,6 +317,13 @@ export async function fetchPosts(): Promise<{ posts: Post[]; allPosts: Post[] }>
   const allPosts = dedup(allRaw)                                                          // 중복 제거
   const jpPosts  = allPosts.filter(p => p.isJapanese)                                    // 일본어만
   const posts    = jpPosts.filter(p => p.matchLevel === "확정") // 확정(브랜드+콜라보 키워드 모두 매칭)만
+
+  // 확정 매칭된 TikTok 게시물은 oEmbed로 실제 영상 썸네일 조회
+  const ttConfirmed = posts.filter(p => p.channel === "TikTok")
+  await mapWithConcurrency(ttConfirmed, 8, async (p) => {
+    const thumb = await fetchTikTokThumbnail(p.url)
+    if (thumb) p.displayUrl = proxyImg(thumb)
+  })
 
   return { posts, allPosts: jpPosts }
 }
