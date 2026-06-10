@@ -173,6 +173,13 @@ function proxyImg(url: string): string {
   return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=400&output=jpg`
 }
 
+// 인스타그램 게시물 URL에서 대표 이미지 URL 추출 (/p/{shortcode}/media/?size=l)
+function instagramMediaUrl(postUrl: string): string {
+  const m = postUrl.match(/instagram\.com\/(?:p|reel)\/([^/?]+)/)
+  if (!m) return ""
+  return `https://www.instagram.com/p/${m[1]}/media/?size=l`
+}
+
 function toNum(v: unknown): number {
   const n = parseFloat(String(v ?? "").replace(/,/g, ""))
   return isNaN(n) ? 0 : n
@@ -252,7 +259,7 @@ function parseInstagram(rows: Record<string, string>[]): Post[] {
       sentiment,
       sentimentKeywords,
       url: row["url"] ?? "",
-      displayUrl: proxyImg(row["displayUrl"] ?? row["images/0"] ?? ""),
+      displayUrl: proxyImg(row["displayUrl"] ?? row["images/0"] ?? instagramMediaUrl(row["url"] ?? "")),
       isVideo: row["type"]?.toLowerCase() === "video",
       isJapanese: hasJapanese(caption + hashtags.join(" ")),
     }
