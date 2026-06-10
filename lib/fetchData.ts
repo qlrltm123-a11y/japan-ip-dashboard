@@ -1,10 +1,10 @@
 import Papa from "papaparse"
 
 const INSTAGRAM_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5ohtCnyOZNc8d02TchDIIYxix8UUB5rPiylPAxiiBaPBOZalqdCWGNRqWx4JTXoy-byBQFoU795un/pub?output=csv"
+  "https://docs.google.com/spreadsheets/d/1KZYTTZlg0jmqzijMl9M5C39R4_4MVMEvTAdrXgttgMk/export?format=csv&gid=0"
 
 const TIKTOK_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTzrniY-zmDRG9TRkZCmW-q6rGpvvORhGuq78-PsYmZh_BArUoY89b3ZutSy2srQ8PRz83NSirpBYNz/pub?output=csv"
+  "https://docs.google.com/spreadsheets/d/1i9ivD_ijIRATvS9IoUyRYK1wCvy1_10BE60ywK4CwGo/export?format=csv&gid=0"
 
 export type MatchLevel = "확정" | "추정" | "미분류"
 
@@ -69,47 +69,40 @@ export function analyzeSentiment(text: string): { sentiment: Post["sentiment"]; 
 }
 
 // ── 캠페인 감지 규칙 ──────────────────────────────────────────────────────────
-// ── 캠페인 감지 규칙 ──────────────────────────────────────────────────────────
 // mustMatch: 그룹마다 하나씩 반드시 매칭 (AND 조건)
-// 예) mustMatch = [[브랜드명들], [제품명들]] → 브랜드명 중 하나 AND 제품명 중 하나 동시 포함 시 분류
+// 그룹1: 브랜드명(한/일), 그룹2: 콜라보 해시태그/키워드
 export const CAMPAIGN_RULES: {
   name: string
   mustMatch: string[][]
-  // 각 배열에서 최소 1개씩 모두 매칭돼야 함 (AND)
-  // 그룹1: 한국 브랜드명, 그룹2: 일본 브랜드명, 그룹3: 콜라보/제품 키워드
 }[] = [
   {
-    name: "ウェイクメイク_平成ギャルエディション",
+    name: "wakemake_ハローキティブラックエディション",
     mustMatch: [
-      ["wakemake", "웨이크메이크"],                                    // ① 한국 브랜드명
-      ["ウェイクメイク"],                                               // ② 일본 브랜드명
-      ["平成ギャル", "ギャルエディション", "헤이세이갸루", "ギャルメイク"], // ③ 제품/콜라보 키워드
+      ["wakemake", "웨이크메이크", "ウェイクメイク"],
+      ["ハローキティブラックエディション", "ハローキティ", "헬로키티"],
     ],
   },
   {
-    name: "カラーグラム_ギャルしんちゃんコレクション",
+    name: "wakemake_平成ギャルエディション",
     mustMatch: [
-      ["colorgram", "컬러그램"],                                              // ① 한국 브랜드명
-      ["カラーグラム"],                                                        // ② 일본 브랜드명
-      ["ギャルしんちゃん", "しんちゃんコレクション", "クレヨンしんちゃん", "갸루신짱"], // ③ 제품/콜라보 키워드
+      ["wakemake", "웨이크메이크", "ウェイクメイク"],
+      ["平成ギャルエディション", "平成ギャル", "헤이세이갸루"],
     ],
   },
   {
-    name: "カラーグラム_立体創造シェーディングスティック",
+    name: "colorgram_ギャルしんちゃんコラボ",
     mustMatch: [
-      ["colorgram", "カラーグラム", "컬러그램"],                                             // ① 브랜드 (한/일 중 하나)
-      ["シェーディング", "シェーディングスティック", "ノーズシャドウ", "ノーズシェーディング", "立体創造"], // ② 제품 키워드
+      ["colorgram", "컬러그램", "カラーグラム"],
+      ["ギャルしんちゃんコラボ", "ギャルしんちゃんコレクション", "ギャルしんちゃん", "갸루신짱"],
     ],
   },
-  // ↓ 새 캠페인 추가 예시
-  // {
-  //   name: "브랜드_캠페인명",
-  //   mustMatch: [
-  //     ["한국브랜드명"],      // ① 한국 브랜드
-  //     ["日本ブランド名"],    // ② 일본 브랜드
-  //     ["콜라보키워드"],      // ③ 제품/콜라보
-  //   ],
-  // },
+  {
+    name: "colorgram_クレヨンしんちゃんコラボ",
+    mustMatch: [
+      ["colorgram", "컬러그램", "カラーグラム"],
+      ["クレヨンしんちゃんコラボ", "クレヨンリップ", "クレヨンしんちゃん"],
+    ],
+  },
 ]
 
 function detectIP(caption: string, hashtags: string[]): { ipName: string; matchLevel: MatchLevel } {
@@ -228,10 +221,10 @@ function parseInstagram(rows: Record<string, string>[]): Post[] {
 function parseTikTok(rows: Record<string, string>[]): Post[] {
   return rows.map((row) => {
     const caption   = row["text"] ?? row["desc"] ?? row["description"] ?? ""
-    const plays     = toNum(row["playCount"] ?? row["stats/playCount"] ?? row["videoMeta/playCount"])
-    const likes     = toNum(row["diggCount"] ?? row["stats/diggCount"] ?? row["likesCount"])
-    const comments  = toNum(row["commentCount"] ?? row["stats/commentCount"] ?? row["commentsCount"])
-    const shares    = toNum(row["shareCount"] ?? row["stats/shareCount"])
+    const plays     = toNum(row["playCount"] ?? row["stats/playCount"] ?? row["videoMeta/playCount"] ?? row["videoMeta.playCount"])
+    const likes     = toNum(row["diggCount"] ?? row["stats/diggCount"] ?? row["likesCount"] ?? row["stats.diggCount"])
+    const comments  = toNum(row["commentCount"] ?? row["stats/commentCount"] ?? row["commentsCount"] ?? row["stats.commentCount"])
+    const shares    = toNum(row["shareCount"] ?? row["stats/shareCount"] ?? row["stats.shareCount"])
     const reactions = likes + comments + shares
     const impressions = plays > 0 ? plays : reactions * 20
     const hashtags  = (caption.match(/#[\w　-鿿가-힣]+/g) ?? []).slice(0, 8)
@@ -242,8 +235,8 @@ function parseTikTok(rows: Record<string, string>[]): Post[] {
     return {
       channel: "TikTok" as const,
       date,
-      owner: row["authorMeta/name"] ?? row["author/uniqueId"] ?? row["authorId"] ?? "",
-      ownerFullName: row["authorMeta/nickName"] ?? row["author/nickname"] ?? "",
+      owner: row["authorMeta/name"] ?? row["authorMeta.name"] ?? row["author/uniqueId"] ?? row["authorId"] ?? "",
+      ownerFullName: row["authorMeta/nickName"] ?? row["authorMeta.nickName"] ?? row["authorMeta.name"] ?? row["author/nickname"] ?? "",
       caption,
       firstComment: "",
       hashtags,
@@ -261,8 +254,8 @@ function parseTikTok(rows: Record<string, string>[]): Post[] {
       sentimentKeywords,
       url: row["webVideoUrl"] ?? row["url"] ?? "",
       displayUrl: proxyImg(
-        row["covers/dynamic"] ?? row["covers/default"] ?? row["videoMeta/coverUrl"] ??
-        row["thumbnailUrl"] ?? row["coverUrl"] ?? row["authorMeta/avatar"] ?? ""
+        row["covers/dynamic"] ?? row["covers/default"] ?? row["videoMeta/coverUrl"] ?? row["videoMeta.coverUrl"] ??
+        row["thumbnailUrl"] ?? row["coverUrl"] ?? row["authorMeta/avatar"] ?? row["authorMeta.avatar"] ?? ""
       ),
       isVideo: true,
       isJapanese: hasJapanese(caption + hashtags.join(" ")),
