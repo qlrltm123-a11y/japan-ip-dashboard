@@ -107,6 +107,20 @@ export const CAMPAIGN_RULES: {
   },
 ]
 
+// 화면 표시용 한글 라벨 (매칭 로직은 위 일본어 캠페인명 기준 그대로 사용)
+export const CAMPAIGN_LABELS: Record<string, string> = {
+  "wakemake_ハローキティブラックエディション": "헬로키티(이전)",
+  "wakemake_平成ギャルエディション": "헤이세이갸루(이번)",
+  "colorgram_ギャルしんちゃんコラボ": "갸루신짱(이번)",
+  "colorgram_クレヨンしんちゃんコラボ": "크레용신짱(이전)",
+  "기타_콜라보": "기타 콜라보",
+  "미분류": "미분류",
+}
+
+export function getCampaignLabel(name: string): string {
+  return CAMPAIGN_LABELS[name] ?? (name.split("_").pop() ?? name)
+}
+
 function detectIP(caption: string, hashtags: string[]): { ipName: string; matchLevel: MatchLevel } {
   const text = (caption + " " + hashtags.join(" ")).toLowerCase()
 
