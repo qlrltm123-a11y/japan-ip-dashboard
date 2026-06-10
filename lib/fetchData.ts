@@ -282,7 +282,7 @@ export async function fetchPosts(): Promise<{ posts: Post[]; allPosts: Post[] }>
   const allRaw   = [...igPosts, ...ttPosts].sort((a, b) => b.date.localeCompare(a.date))
   const allPosts = dedup(allRaw)                                                          // 중복 제거
   const jpPosts  = allPosts.filter(p => p.isJapanese)                                    // 일본어만
-  const posts    = jpPosts.filter(p => p.matchLevel === "확정" || p.matchLevel === "추정") // 확정+추정만
+  const posts    = jpPosts.filter(p => p.matchLevel === "확정") // 확정(브랜드+콜라보 키워드 모두 매칭)만
 
   return { posts, allPosts: jpPosts }
 }
