@@ -6,10 +6,13 @@ const INSTAGRAM_CSV_URL =
 const TIKTOK_CSV_URL =
   "https://docs.google.com/spreadsheets/d/1i9ivD_ijIRATvS9IoUyRYK1wCvy1_10BE60ywK4CwGo/export?format=csv&gid=0"
 
+const YOUTUBE_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/10wsx0_W9tNTxs-0XHzsBFLYn6AkDvud43fiGGkQGpVw/export?format=csv&gid=0"
+
 export type MatchLevel = "확정" | "추정" | "미분류"
 
 export interface Post {
-  channel: "Instagram" | "TikTok"
+  channel: "Instagram" | "TikTok" | "YouTube"
   date: string
   owner: string
   ownerFullName: string
@@ -189,6 +192,13 @@ function instagramMediaUrl(postUrl: string): string {
   return `https://www.instagram.com/p/${m[1]}/media/?size=l`
 }
 
+// 유튜브 영상 URL에서 썸네일 추출
+function youtubeThumbnail(url: string): string {
+  const m = url.match(/(?:v=|youtu\.be\/|shorts\/)([\w-]{11})/)
+  if (!m) return ""
+  return `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg`
+}
+
 function toNum(v: unknown): number {
   const n = parseFloat(String(v ?? "").replace(/,/g, ""))
   return isNaN(n) ? 0 : n
@@ -341,16 +351,59 @@ function parseTikTok(rows: Record<string, string>[]): Post[] {
   }).filter(p => p.date)
 }
 
+function parseYouTube(rows: Record<string, string>[]): Post[] {
+  return rows.map((row) => {
+    const caption   = row["title"] ?? ""
+    const plays     = toNum(row["viewCount"])
+    const likes     = toNum(row["likes"])
+    const comments  = toNum(row["commentsCount"])
+    const reactions = likes + comments
+    const impressions = plays > 0 ? plays : reactions * 20
+    const hashtags  = (caption.match(/#[\w　-鿿가-힣]+/g) ?? []).slice(0, 8)
+    const date      = (row["date"] ?? "").split("T")[0]
+    const { sentiment, keywords: sentimentKeywords } = analyzeSentiment(caption)
+    const { ipName, matchLevel } = detectIP(caption, hashtags)
+    return {
+      channel: "YouTube" as const,
+      date,
+      owner: row["channelName"] ?? "",
+      ownerFullName: row["channelName"] ?? "",
+      caption,
+      firstComment: "",
+      translatedComment: "",
+      hashtags,
+      comments,
+      likes,
+      plays,
+      shares: 0,
+      reactions,
+      impressions,
+      engagementRate: impressions > 0 ? +((reactions / impressions) * 100).toFixed(2) : 0,
+      contentType: "영상",
+      ipName,
+      matchLevel,
+      sentiment,
+      sentimentKeywords,
+      url: row["url"] ?? "",
+      displayUrl: proxyImg(youtubeThumbnail(row["url"] ?? "")),
+      isVideo: true,
+      isJapanese: hasJapanese(caption + hashtags.join(" ")),
+    }
+  }).filter(p => p.date)
+}
+
 export async function fetchPosts(): Promise<{ posts: Post[]; allPosts: Post[] }> {
-  const [igRows, ttRows] = await Promise.all([
+  const [igRows, ttRows, ytRows] = await Promise.all([
     fetchCSV(INSTAGRAM_CSV_URL),
     fetchCSV(TIKTOK_CSV_URL),
+    fetchCSV(YOUTUBE_CSV_URL),
   ])
 
   const igPosts = parseInstagram(igRows)
   const ttPosts = parseTikTok(ttRows)
+  const ytPosts = parseYouTube(ytRows)
 
-  const allRaw   = [...igPosts, ...ttPosts].sort((a, b) => b.date.localeCompare(a.date))
+  const allRaw   = [...igPosts, ...ttPosts, ...ytPosts].sort((a, b) => b.date.localeCompare(a.date))
   const allPosts = dedup(allRaw)                                                          // 중복 제거
   const jpPosts  = allPosts.filter(p => p.isJapanese)                                    // 일본어만
   const posts    = jpPosts.filter(p => p.matchLevel === "확정") // 확정(브랜드+콜라보 키워드 모두 매칭)만

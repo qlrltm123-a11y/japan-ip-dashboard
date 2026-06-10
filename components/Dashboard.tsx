@@ -19,6 +19,12 @@ const TYPE_COLORS: Record<string, string> = {
 const CHANNEL_COLORS: Record<string, string> = {
   "Instagram": "#e1306c",
   "TikTok": "#69c9d0",
+  "YouTube": "#ff0000",
+}
+const CHANNEL_LABELS: Record<string, string> = {
+  "Instagram": "IG",
+  "TikTok": "TT",
+  "YouTube": "YT",
 }
 
 function fmt(n: number): string {
@@ -86,7 +92,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
   const [isPending, startTransition] = useTransition()
   const [tab, setTab] = useState<Tab>("overview")
   const [selectedCampaign, setSelectedCampaign] = useState("전체")
-  const [selectedChannel, setSelectedChannel] = useState<"전체" | "Instagram" | "TikTok">("전체")
+  const [selectedChannel, setSelectedChannel] = useState<"전체" | "Instagram" | "TikTok" | "YouTube">("전체")
   const [selectedBrand, setSelectedBrand] = useState<"전체" | "wakemake" | "colorgram">("전체")
   const [sortBy, setSortBy] = useState<"reactions" | "plays" | "comments">("reactions")
   const [jpOnly, setJpOnly] = useState(true)
@@ -103,6 +109,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
 
   const igCount = brandFiltered.filter(p => p.channel === "Instagram").length
   const ttCount = brandFiltered.filter(p => p.channel === "TikTok").length
+  const ytCount = brandFiltered.filter(p => p.channel === "YouTube").length
   // 캠페인 모드: 정의된 캠페인만 / 전체 모드: 미분류 포함
   const allCampaigns = (jpOnly
     ? ["전체", ...CAMPAIGN_RULES.map(r => r.name)]
@@ -314,7 +321,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
             <span className="text-xl">🇯🇵</span>
             <div>
               <h1 className="text-sm font-bold text-[#f0f0f6] leading-none">일본 IP 콜라보 대시보드</h1>
-              <p className="text-[10px] text-[#7d7d92] mt-0.5">Instagram · TikTok · {brandFiltered.length}건 수집</p>
+              <p className="text-[10px] text-[#7d7d92] mt-0.5">Instagram · TikTok · YouTube · {brandFiltered.length}건 수집</p>
             </div>
           </div>
 
@@ -373,8 +380,8 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
 
         {/* 채널 선택 */}
         <div className="max-w-7xl mx-auto px-6 pb-2 flex gap-2">
-          {(["전체", "Instagram", "TikTok"] as const).map(ch => {
-            const count = ch === "전체" ? brandFiltered.length : ch === "Instagram" ? igCount : ttCount
+          {(["전체", "Instagram", "TikTok", "YouTube"] as const).map(ch => {
+            const count = ch === "전체" ? brandFiltered.length : ch === "Instagram" ? igCount : ch === "TikTok" ? ttCount : ytCount
             const color = ch === "전체" ? "#6366f1" : CHANNEL_COLORS[ch]
             const isActive = selectedChannel === ch
             return (
@@ -385,7 +392,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                   color: isActive ? "#fff" : "#a8a8ba",
                   border: `1px solid ${isActive ? color : "#34354a"}`,
                 }}>
-                {ch === "Instagram" ? "📸" : ch === "TikTok" ? "🎵" : "🌐"} {ch}
+                {ch === "Instagram" ? "📸" : ch === "TikTok" ? "🎵" : ch === "YouTube" ? "▶️" : "🌐"} {ch}
                 <span className="opacity-70 text-[10px]">{count}</span>
               </button>
             )
@@ -421,9 +428,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
         {/* ── KPI ──────────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <Kpi label="수집 게시물" value={`${fp.length}건`}
-            sub={`IG ${fp.filter(p=>p.channel==="Instagram").length} / TT ${fp.filter(p=>p.channel==="TikTok").length}`}
+            sub={`IG ${fp.filter(p=>p.channel==="Instagram").length} / TT ${fp.filter(p=>p.channel==="TikTok").length} / YT ${fp.filter(p=>p.channel==="YouTube").length}`}
             accent="#6366f1" />
-          {selectedChannel === "TikTok" ? (
+          {selectedChannel === "TikTok" || selectedChannel === "YouTube" ? (
             <Kpi label="총 재생수" value={fmt(totalPlays)}
               sub={`평균 ${fp.length > 0 ? fmt(Math.round(totalPlays/fp.length)) : 0}/건`}
               accent="#69c9d0" />
@@ -523,7 +530,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                 <table className="w-full text-xs mt-4">
                   <thead>
                     <tr className="border-b border-[#34354a]">
-                      {["캠페인", "투고 기간", "게시물", "총 좋아요", "총 댓글", "게시물당 반응", "TikTok 재생"].map(h => (
+                      {["캠페인", "투고 기간", "게시물", "총 좋아요", "총 댓글", "게시물당 반응", "총 재생"].map(h => (
                         <th key={h} className={`py-2 text-[10px] font-bold text-[#7d7d92] uppercase tracking-wider ${h === "캠페인" ? "text-left" : "text-right"}`}>{h}</th>
                       ))}
                     </tr>
@@ -601,7 +608,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                       <span className="text-[11px] font-semibold text-[#c8c8d6] w-28 truncate flex-shrink-0">@{acc.owner}</span>
                       <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0"
                         style={{ background: color + "22", color }}>
-                        {acc.channel === "TikTok" ? "TT" : "IG"}
+                        {CHANNEL_LABELS[acc.channel] ?? acc.channel}
                       </span>
                       <div className="flex-1 h-2 bg-[#23242f] rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all" style={{ width: `${barPct}%`, background: color }} />
@@ -686,7 +693,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                           </div>
                           {data.plays > 0 && (
                             <div className="col-span-2">
-                              <p className="text-[10px] text-[#7d7d92] mb-0.5">총 재생 (TikTok)</p>
+                              <p className="text-[10px] text-[#7d7d92] mb-0.5">총 재생 (TikTok/YouTube)</p>
                               <p className="text-sm font-semibold text-[#c8c8d6]">{fmt(data.plays)}</p>
                             </div>
                           )}
@@ -816,7 +823,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                     <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
                       <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold"
                         style={{ background: CHANNEL_COLORS[p.channel] + "dd", color: "#fff" }}>
-                        {p.channel === "TikTok" ? "TT" : "IG"}
+                        {CHANNEL_LABELS[p.channel] ?? p.channel}
                       </span>
                       <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold"
                         style={{ background: "#00000088", color: "#fff" }}>
@@ -848,7 +855,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                     </div>
                     <div className="flex justify-between items-center mt-2 pt-2 border-t border-[#23242f]">
                       <span className="text-[10px] text-[#a8a8ba]">
-                        {p.channel === "TikTok" ? `▶ ${fmt(p.plays)}` : `💬 ${p.comments}`}
+                        {p.channel === "TikTok" || p.channel === "YouTube" ? `▶ ${fmt(p.plays)}` : `💬 ${p.comments}`}
                       </span>
                       <span className="text-[10px] text-[#7d7d92]">{p.date.slice(5)}</span>
                     </div>
@@ -1007,7 +1014,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                       <td className="px-4 py-2.5">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold"
                           style={{ background: CHANNEL_COLORS[p.channel] + "22", color: CHANNEL_COLORS[p.channel] }}>
-                          {p.channel === "TikTok" ? "🎵 TikTok" : "📸 IG"}
+                          {p.channel === "TikTok" ? "🎵 TikTok" : p.channel === "YouTube" ? "▶️ YouTube" : "📸 IG"}
                         </span>
                       </td>
                       <td className="px-4 py-2.5">
