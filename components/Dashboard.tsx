@@ -86,6 +86,39 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
   )
 }
 
+// 이전 vs 이번 지표 막대 비교 (단위가 서로 다른 지표를 한 차트 없이 비교)
+function MetricCompareRow({ label, prevVal, currVal, prevColor, currColor, format, change }: {
+  label: string; prevVal: number; currVal: number; prevColor: string; currColor: string
+  format: (n: number) => string; change: number | null
+}) {
+  const max = Math.max(prevVal, currVal, 1)
+  return (
+    <div>
+      <div className="flex justify-between items-center text-[11px] mb-1.5">
+        <span className="font-bold text-[#6b6c80]">{label}</span>
+        {change !== null && (
+          <span className="font-bold" style={{ color: change >= 0 ? "#34d399" : "#f87171" }}>
+            {change >= 0 ? "+" : ""}{change}%
+          </span>
+        )}
+      </div>
+      <div className="space-y-1.5">
+        {[
+          { val: prevVal, color: prevColor },
+          { val: currVal, color: currColor },
+        ].map(({ val, color }, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <div className="flex-1 h-2 rounded-full overflow-hidden bg-[#eef0f5]">
+              <div className="h-full rounded-full" style={{ width: `${Math.max(val / max * 100, val > 0 ? 3 : 0)}%`, background: color }} />
+            </div>
+            <span className="text-[10px] w-14 text-right font-semibold text-[#1a1b26]">{format(val)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── 메인 ─────────────────────────────────────────────────────────────────────
 export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[]; allPosts: Post[]; fetchedAt: string }) {
   const router = useRouter()
@@ -316,28 +349,40 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
       const likes     = ps.reduce((a, p) => a + p.likes, 0)
       const comments  = ps.reduce((a, p) => a + p.comments, 0)
       const plays     = ps.reduce((a, p) => a + p.plays, 0)
+      const shares    = ps.reduce((a, p) => a + p.shares, 0)
+      const engagementSum = ps.reduce((a, p) => a + p.engagementRate, 0)
       const count = ps.length
       const dates = ps.map(p => p.date).sort()
       return {
         name,
-        count, reactions, likes, comments, plays,
+        count, reactions, likes, comments, plays, shares,
         avgReactions: count > 0 ? Math.round(reactions / count) : 0,
+        avgLikes: count > 0 ? Math.round(likes / count) : 0,
+        avgComments: count > 0 ? +(comments / count).toFixed(1) : 0,
+        avgPlays: count > 0 ? Math.round(plays / count) : 0,
+        avgShares: count > 0 ? +(shares / count).toFixed(1) : 0,
+        avgEngagement: count > 0 ? +(engagementSum / count).toFixed(2) : 0,
         minDate: dates[0] ?? "-",
         maxDate: dates[dates.length - 1] ?? "-",
       }
     }
+    const pctChange = (prevVal: number, currVal: number) =>
+      prevVal > 0 ? Math.round((currVal - prevVal) / prevVal * 100) : null
+
     return BRAND_COMPARISONS
       .filter(({ brand }) => selectedBrand === "전체" || brand === selectedBrand)
       .map(({ brand, prevName, currName }) => {
         const prev = calc(prevName)
         const curr = calc(currName)
-        const change = prev.avgReactions > 0
-          ? Math.round((curr.avgReactions - prev.avgReactions) / prev.avgReactions * 100)
-          : null
-        const countChange = prev.count > 0
-          ? Math.round((curr.count - prev.count) / prev.count * 100)
-          : null
-        return { brand, prev, curr, change, countChange }
+        const change = pctChange(prev.avgReactions, curr.avgReactions)
+        const countChange = pctChange(prev.count, curr.count)
+        return {
+          brand, prev, curr, change, countChange,
+          likesChange:      pctChange(prev.avgLikes, curr.avgLikes),
+          commentsChange:   pctChange(prev.avgComments, curr.avgComments),
+          playsChange:      pctChange(prev.avgPlays, curr.avgPlays),
+          engagementChange: pctChange(prev.avgEngagement, curr.avgEngagement),
+        }
       })
   }, [compareBase, selectedBrand])
 
@@ -681,12 +726,14 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
         ══════════════════════════════════════════════════════════════════ */}
         {tab === "compare" && (
           <div className="space-y-4">
-            {brandStats.map(({ brand, prev, curr, change, countChange }) => {
+            {brandStats.map(({ brand, prev, curr, change, countChange, likesChange, commentsChange, playsChange, engagementChange }) => {
               const cmp = BRAND_COMPARISONS.find(b => b.brand === brand)!
-              const chartData = [
-                { metric: "게시물수",     이전: prev.count,        이번: curr.count },
-                { metric: "총 반응",      이전: prev.reactions,    이번: curr.reactions },
-                { metric: "게시물당 반응", 이전: prev.avgReactions, 이번: curr.avgReactions },
+              const prevColor = "#8a8ba0"
+              const currColor = getCampaignColor(cmp.currName)
+              const showPlays = prev.plays > 0 || curr.plays > 0
+              const countChartData = [
+                { metric: "게시물수", 이전: prev.count,     이번: curr.count },
+                { metric: "총 반응",  이전: prev.reactions, 이번: curr.reactions },
               ]
               return (
                 <Card key={brand}>
@@ -705,8 +752,8 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                     {[
-                      { label: cmp.prevName, data: prev, color: "#8a8ba0" },
-                      { label: cmp.currName, data: curr, color: getCampaignColor(cmp.currName) },
+                      { label: cmp.prevName, data: prev, color: prevColor },
+                      { label: cmp.currName, data: curr, color: currColor },
                     ].map(({ label, data, color }) => (
                       <div key={label} className="rounded-xl border border-[#dcdfeb] p-4" style={{ background: "#f4f5f9" }}>
                         <div className="flex items-center justify-between mb-3">
@@ -723,32 +770,58 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                             <p className="text-lg font-bold text-[#1a1b26]">{fmt(data.avgReactions)}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] text-[#8a8ba0] mb-0.5">총 좋아요</p>
-                            <p className="text-sm font-semibold text-[#4b4c60]">{fmt(data.likes)}</p>
+                            <p className="text-[10px] text-[#8a8ba0] mb-0.5">게시물당 좋아요</p>
+                            <p className="text-sm font-semibold text-[#4b4c60]">{fmt(data.avgLikes)}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] text-[#8a8ba0] mb-0.5">총 댓글</p>
-                            <p className="text-sm font-semibold text-[#4b4c60]">{fmt(data.comments)}</p>
+                            <p className="text-[10px] text-[#8a8ba0] mb-0.5">게시물당 댓글</p>
+                            <p className="text-sm font-semibold text-[#4b4c60]">{data.avgComments}</p>
                           </div>
-                          {data.plays > 0 && (
-                            <div className="col-span-2">
-                              <p className="text-[10px] text-[#8a8ba0] mb-0.5">총 재생 (TikTok/YouTube)</p>
-                              <p className="text-sm font-semibold text-[#4b4c60]">{fmt(data.plays)}</p>
+                          {showPlays && (
+                            <div>
+                              <p className="text-[10px] text-[#8a8ba0] mb-0.5">게시물당 재생</p>
+                              <p className="text-sm font-semibold text-[#4b4c60]">{fmt(data.avgPlays)}</p>
                             </div>
                           )}
+                          <div>
+                            <p className="text-[10px] text-[#8a8ba0] mb-0.5">평균 참여율</p>
+                            <p className="text-sm font-semibold text-[#4b4c60]">{data.avgEngagement}%</p>
+                          </div>
+                          <div className="col-span-2 pt-2 mt-1 border-t border-[#dcdfeb] flex gap-4 text-[10px] text-[#8a8ba0]">
+                            <span>총 좋아요 {fmt(data.likes)}</span>
+                            <span>총 댓글 {fmt(data.comments)}</span>
+                            {data.plays > 0 && <span>총 재생 {fmt(data.plays)}</span>}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
 
+                  {/* 게시물당 인게이지먼트 비교 (좋아요/댓글/재생/참여율) */}
+                  <div className="mb-4">
+                    <p className="text-[10px] font-bold tracking-widest text-[#8a8ba0] uppercase mb-3">게시물당 인게이지먼트 비교</p>
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 ${showPlays ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4`}>
+                      <MetricCompareRow label="좋아요/건" prevVal={prev.avgLikes} currVal={curr.avgLikes}
+                        prevColor={prevColor} currColor={currColor} format={n => fmt(n)} change={likesChange} />
+                      <MetricCompareRow label="댓글/건" prevVal={prev.avgComments} currVal={curr.avgComments}
+                        prevColor={prevColor} currColor={currColor} format={n => n.toString()} change={commentsChange} />
+                      {showPlays && (
+                        <MetricCompareRow label="재생/건" prevVal={prev.avgPlays} currVal={curr.avgPlays}
+                          prevColor={prevColor} currColor={currColor} format={n => fmt(n)} change={playsChange} />
+                      )}
+                      <MetricCompareRow label="평균 참여율" prevVal={prev.avgEngagement} currVal={curr.avgEngagement}
+                        prevColor={prevColor} currColor={currColor} format={n => `${n}%`} change={engagementChange} />
+                    </div>
+                  </div>
+
                   <ResponsiveContainer width="100%" height={180}>
-                    <BarChart data={chartData} barSize={28}>
+                    <BarChart data={countChartData} barSize={28}>
                       <XAxis dataKey="metric" stroke="#c5c8d6" tick={{ fill: "#6b6c80", fontSize: 11 }} axisLine={false} tickLine={false} />
                       <YAxis stroke="#c5c8d6" tick={{ fill: "#8a8ba0", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
                       <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#00000008" }} formatter={(v: number) => fmt(v)} />
                       <Legend wrapperStyle={{ fontSize: 11, color: "#6b6c80" }} />
-                      <Bar dataKey="이전" name="이전 콜라보" fill="#6b7280" radius={[6,6,0,0]} />
-                      <Bar dataKey="이번" name="이번 콜라보" fill={getCampaignColor(cmp.currName)} radius={[6,6,0,0]} />
+                      <Bar dataKey="이전" name="이전 콜라보" fill={prevColor} radius={[6,6,0,0]} />
+                      <Bar dataKey="이번" name="이번 콜라보" fill={currColor} radius={[6,6,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
 
