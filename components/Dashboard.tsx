@@ -324,6 +324,12 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
       ps.forEach(p => p.sentimentKeywords.forEach(kw => { map[kw] = (map[kw] ?? 0) + 1 }))
       return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([kw, count]) => ({ kw, count }))
     }
+    const calcTopComments = (name: string) =>
+      compareBase
+        .filter(p => p.ipName === name)
+        .filter(p => p.firstComment && p.firstComment.trim().length > 3)
+        .sort((a, b) => b.likes - a.likes)
+        .slice(0, 3)
     return BRAND_COMPARISONS
       .filter(({ brand }) => selectedBrand === "전체" || brand === selectedBrand)
       .map(({ brand, prevName, currName }) => {
@@ -338,6 +344,8 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
           chartData,
           prevKeywords: calcKeywords(prevName),
           currKeywords: calcKeywords(currName),
+          prevTopComments: calcTopComments(prevName),
+          currTopComments: calcTopComments(currName),
         }
       })
   }, [compareBase, selectedBrand])
@@ -1113,6 +1121,39 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                       )}
                     </div>
                   </div>
+                </div>
+
+                {/* 실제 댓글 비교 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4 pt-4 border-t border-[#dcdfeb]">
+                  {[
+                    { label: cmp.prevName, comments: cmp.prevTopComments, color: "#9ca3af" },
+                    { label: cmp.currName, comments: cmp.currTopComments, color: getCampaignColor(cmp.currName) },
+                  ].map(({ label, comments, color }) => (
+                    <div key={label}>
+                      <p className="text-[10px] font-bold mb-2" style={{ color }}>{getCampaignLabel(label)} 인기 댓글</p>
+                      {comments.length === 0 ? (
+                        <p className="text-[#8a8ba0] text-xs">댓글 데이터 없음</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {comments.map((p, j) => (
+                            <a key={j} href={p.url || "#"} target="_blank" rel="noopener noreferrer"
+                              className="block p-2.5 rounded-lg border border-[#dcdfeb] hover:border-[#6366f1] transition-colors bg-[#f4f5f9]">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                                  style={{ background: SENTIMENT_COLORS[p.sentiment] + "22", color: SENTIMENT_COLORS[p.sentiment] }}>
+                                  {p.sentiment}
+                                </span>
+                                <span className="text-[10px] text-[#8a8ba0] ml-auto">❤️ {fmt(p.likes)}</span>
+                              </div>
+                              <p className="text-xs text-[#2c2d3d] leading-relaxed line-clamp-2">
+                                💬 {p.translatedComment || p.firstComment}
+                              </p>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </Card>
             ))}
