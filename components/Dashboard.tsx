@@ -38,10 +38,10 @@ function getCampaignColor(name: string): string {
 }
 
 const TOOLTIP_STYLE = {
-  backgroundColor: "#1b1c26",
-  border: "1px solid #34354a",
+  backgroundColor: "#ffffff",
+  border: "1px solid #dcdfeb",
   borderRadius: 10,
-  color: "#e2e2e8",
+  color: "#2c2d3d",
   fontSize: 12,
 }
 
@@ -63,24 +63,24 @@ const SENTIMENT_COLORS: Record<string, string> = {
 // ── 서브 컴포넌트 ─────────────────────────────────────────────────────────────
 function Kpi({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: string }) {
   return (
-    <div className="relative bg-[#1b1c26] border border-[#34354a] rounded-2xl p-5 overflow-hidden">
+    <div className="relative bg-[#ffffff] border border-[#dcdfeb] rounded-2xl p-5 overflow-hidden">
       <div className="absolute top-0 left-0 w-1 h-full rounded-l-2xl" style={{ background: accent ?? "#6366f1" }} />
-      <p className="text-[11px] font-semibold tracking-widest text-[#a8a8ba] uppercase mb-1">{label}</p>
-      <p className="text-2xl font-bold text-[#f0f0f6]">{value}</p>
-      {sub && <p className="text-[11px] text-[#9494a8] mt-1">{sub}</p>}
+      <p className="text-[11px] font-semibold tracking-widest text-[#6b6c80] uppercase mb-1">{label}</p>
+      <p className="text-2xl font-bold text-[#1a1b26]">{value}</p>
+      {sub && <p className="text-[11px] text-[#8a8ba0] mt-1">{sub}</p>}
     </div>
   )
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-[11px] font-bold tracking-widest text-[#9494a8] uppercase mb-4">{children}</h3>
+    <h3 className="text-[11px] font-bold tracking-widest text-[#8a8ba0] uppercase mb-4">{children}</h3>
   )
 }
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-[#1b1c26] border border-[#34354a] rounded-2xl p-5 ${className}`}>
+    <div className={`bg-[#ffffff] border border-[#dcdfeb] rounded-2xl p-5 ${className}`}>
       {children}
     </div>
   )
@@ -351,16 +351,16 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
   ]
 
   return (
-    <div className="min-h-screen" style={{ background: "#0e0f16", color: "#e2e2e8", fontFamily: "system-ui, sans-serif" }}>
+    <div className="min-h-screen" style={{ background: "#f4f5f9", color: "#2c2d3d", fontFamily: "system-ui, sans-serif" }}>
 
       {/* ── 헤더 ──────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-20 border-b border-[#23242f]" style={{ background: "rgba(12,12,16,0.92)", backdropFilter: "blur(12px)" }}>
+      <header className="sticky top-0 z-20 border-b border-[#dcdfeb]" style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(12px)" }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="text-xl">🇯🇵</span>
             <div>
-              <h1 className="text-sm font-bold text-[#f0f0f6] leading-none">일본 IP 콜라보 대시보드</h1>
-              <p className="text-[10px] text-[#7d7d92] mt-0.5">Instagram · TikTok · YouTube · {brandFiltered.length}건 수집</p>
+              <h1 className="text-sm font-bold text-[#1a1b26] leading-none">일본 IP 콜라보 대시보드</h1>
+              <p className="text-[10px] text-[#8a8ba0] mt-0.5">Instagram · TikTok · YouTube · {brandFiltered.length}건 수집</p>
             </div>
           </div>
 
@@ -372,9 +372,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                 <button key={b} onClick={() => setSelectedBrand(b)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border"
                   style={{
-                    background: isActive ? "#312e81" : "#23242f",
-                    borderColor: isActive ? "#6366f1" : "#34354a",
-                    color: isActive ? "#c7d2fe" : "#9494a8",
+                    background: isActive ? "#e0e7ff" : "#eef0f5",
+                    borderColor: isActive ? "#6366f1" : "#dcdfeb",
+                    color: isActive ? "#4338ca" : "#8a8ba0",
                   }}>
                   {b === "전체" ? "🏷️ 전체" : b === "wakemake" ? "💄 wakemake" : "🎨 colorgram"}
                 </button>
@@ -384,15 +384,15 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
             <button onClick={() => setJpOnly(v => !v)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border"
               style={{
-                background: jpOnly ? "#1a1040" : "#23242f",
-                borderColor: jpOnly ? "#6366f155" : "#34354a",
-                color: jpOnly ? "#818cf8" : "#9494a8",
+                background: jpOnly ? "#e0e7ff" : "#eef0f5",
+                borderColor: jpOnly ? "#6366f155" : "#dcdfeb",
+                color: jpOnly ? "#4f46e5" : "#8a8ba0",
               }}>
               🎯 {jpOnly ? (
                 <>캠페인 <span style={{color:"#34d399"}}>확정 {brandFiltered.length}</span></>
               ) : `일본어 전체 (${allPosts.length})`}
             </button>
-            <span className="text-[11px] text-[#7d7d92]">
+            <span className="text-[11px] text-[#8a8ba0]">
               {fetchedAt}
             </span>
             <button
@@ -400,9 +400,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
               disabled={isPending}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all"
               style={{
-                background: isPending ? "#23242f" : "#6366f1",
-                color: isPending ? "#9494a8" : "#fff",
-                border: "1px solid " + (isPending ? "#34354a" : "#6366f1"),
+                background: isPending ? "#eef0f5" : "#6366f1",
+                color: isPending ? "#8a8ba0" : "#fff",
+                border: "1px solid " + (isPending ? "#dcdfeb" : "#6366f1"),
               }}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
@@ -427,9 +427,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
               <button key={ch} onClick={() => setSelectedChannel(ch)}
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all"
                 style={{
-                  background: isActive ? color : "#23242f",
-                  color: isActive ? "#fff" : "#a8a8ba",
-                  border: `1px solid ${isActive ? color : "#34354a"}`,
+                  background: isActive ? color : "#eef0f5",
+                  color: isActive ? "#fff" : "#6b6c80",
+                  border: `1px solid ${isActive ? color : "#dcdfeb"}`,
                 }}>
                 {ch === "Instagram" ? "📸" : ch === "TikTok" ? "🎵" : ch === "YouTube" ? "▶️" : "🌐"} {ch}
                 <span className="opacity-70 text-[10px]">{count}</span>
@@ -450,8 +450,8 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                 className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all"
                 style={{
                   background: isActive ? color + "22" : "transparent",
-                  border: `1px solid ${isActive ? color : "#34354a"}`,
-                  color: isActive ? color : "#9494a8",
+                  border: `1px solid ${isActive ? color : "#dcdfeb"}`,
+                  color: isActive ? color : "#8a8ba0",
                 }}>
                 {isActive && <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />}
                 {label}
@@ -487,13 +487,13 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
         </div>
 
         {/* ── 탭 ───────────────────────────────────────────────────────────── */}
-        <div className="flex gap-1 mb-6 bg-[#1b1c26] border border-[#34354a] rounded-2xl p-1 w-fit">
+        <div className="flex gap-1 mb-6 bg-[#ffffff] border border-[#dcdfeb] rounded-2xl p-1 w-fit">
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className="px-5 py-2 rounded-xl text-xs font-semibold transition-all"
               style={{
                 background: tab === t.id ? "#6366f1" : "transparent",
-                color: tab === t.id ? "#fff" : "#9494a8",
+                color: tab === t.id ? "#fff" : "#8a8ba0",
               }}>
               {t.label}
             </button>
@@ -517,19 +517,19 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                   style={{ color: momentum.change >= 0 ? "#34d399" : "#f87171" }}>
                   버즈 모멘텀 — {momentum.change >= 0 ? "📈 상승 중" : "📉 하락 중"}
                 </p>
-                <p className="text-2xl font-bold text-[#f0f0f6]">
+                <p className="text-2xl font-bold text-[#1a1b26]">
                   {momentum.change >= 0 ? "+" : ""}{momentum.change}%
-                  <span className="text-sm font-normal text-[#a8a8ba] ml-2">전반부 대비 후반부</span>
+                  <span className="text-sm font-normal text-[#6b6c80] ml-2">전반부 대비 후반부</span>
                 </p>
               </div>
               <div className="flex gap-6 text-center">
                 <div>
-                  <p className="text-[10px] text-[#9494a8] mb-0.5">전반부 평균 반응</p>
-                  <p className="text-lg font-bold text-[#c8c8d6]">{fmt(momentum.prevAvg)}</p>
+                  <p className="text-[10px] text-[#8a8ba0] mb-0.5">전반부 평균 반응</p>
+                  <p className="text-lg font-bold text-[#4b4c60]">{fmt(momentum.prevAvg)}</p>
                 </div>
-                <div className="w-px bg-[#34354a]" />
+                <div className="w-px bg-[#dcdfeb]" />
                 <div>
-                  <p className="text-[10px] text-[#9494a8] mb-0.5">후반부 평균 반응</p>
+                  <p className="text-[10px] text-[#8a8ba0] mb-0.5">후반부 평균 반응</p>
                   <p className="text-lg font-bold" style={{ color: momentum.change >= 0 ? "#34d399" : "#f87171" }}>
                     {fmt(momentum.recentAvg)}
                   </p>
@@ -544,9 +544,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={byCampaign} barSize={36}>
-                      <XAxis dataKey="name" stroke="#454659" tick={{ fill: "#b0b0c0", fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis stroke="#454659" tick={{ fill: "#9494a8", fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }}
+                      <XAxis dataKey="name" stroke="#c5c8d6" tick={{ fill: "#6b6c80", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis stroke="#c5c8d6" tick={{ fill: "#8a8ba0", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#00000008" }}
                         formatter={(v: number) => [v.toLocaleString(), "게시물 수"]} />
                       <Bar dataKey="count" name="게시물 수" radius={[8,8,0,0]}>
                         {byCampaign.map((e, i) => <Cell key={i} fill={getCampaignColor(e.fullName)} />)}
@@ -555,9 +555,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                   </ResponsiveContainer>
                   <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={byCampaign} barSize={36}>
-                      <XAxis dataKey="name" stroke="#454659" tick={{ fill: "#b0b0c0", fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis stroke="#454659" tick={{ fill: "#9494a8", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
-                      <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }}
+                      <XAxis dataKey="name" stroke="#c5c8d6" tick={{ fill: "#6b6c80", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis stroke="#c5c8d6" tick={{ fill: "#8a8ba0", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#00000008" }}
                         formatter={(v: number) => [fmt(v), "게시물당 평균 반응"]} />
                       <Bar dataKey="avgReactions" name="평균 반응" radius={[8,8,0,0]}>
                         {byCampaign.map((e, i) => <Cell key={i} fill={getCampaignColor(e.fullName)} />)}
@@ -568,27 +568,27 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                 {/* 캠페인 요약 테이블 */}
                 <table className="w-full text-xs mt-4">
                   <thead>
-                    <tr className="border-b border-[#34354a]">
+                    <tr className="border-b border-[#dcdfeb]">
                       {["캠페인", "투고 기간", "게시물", "총 좋아요", "총 댓글", "게시물당 반응", "총 재생"].map(h => (
-                        <th key={h} className={`py-2 text-[10px] font-bold text-[#7d7d92] uppercase tracking-wider ${h === "캠페인" ? "text-left" : "text-right"}`}>{h}</th>
+                        <th key={h} className={`py-2 text-[10px] font-bold text-[#8a8ba0] uppercase tracking-wider ${h === "캠페인" ? "text-left" : "text-right"}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {byCampaign.map(row => (
-                      <tr key={row.name} className="border-b border-[#23242f] hover:bg-[#ffffff03]">
+                      <tr key={row.name} className="border-b border-[#eef0f5] hover:bg-[#00000005]">
                         <td className="py-2.5 flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: getCampaignColor(row.fullName) }} />
-                          <span className="text-[#e0e0e8] truncate max-w-[120px]">{row.name}</span>
+                          <span className="text-[#2c2d3d] truncate max-w-[120px]">{row.name}</span>
                         </td>
-                        <td className="py-2.5 text-right text-[#a8a8ba] whitespace-nowrap">
+                        <td className="py-2.5 text-right text-[#6b6c80] whitespace-nowrap">
                           {row.minDate.slice(2).replace(/-/g, ".")} ~ {row.maxDate.slice(2).replace(/-/g, ".")}
                         </td>
-                        <td className="py-2.5 text-right text-[#b6b6c6]">{row.count}</td>
-                        <td className="py-2.5 text-right text-[#b6b6c6]">{fmt(row.likes)}</td>
-                        <td className="py-2.5 text-right text-[#b6b6c6]">{fmt(row.comments)}</td>
+                        <td className="py-2.5 text-right text-[#6b6c80]">{row.count}</td>
+                        <td className="py-2.5 text-right text-[#6b6c80]">{fmt(row.likes)}</td>
+                        <td className="py-2.5 text-right text-[#6b6c80]">{fmt(row.comments)}</td>
                         <td className="py-2.5 text-right font-bold" style={{ color: getCampaignColor(row.fullName) }}>{fmt(row.avgReactions)}</td>
-                        <td className="py-2.5 text-right text-[#b6b6c6]">{row.plays > 0 ? fmt(row.plays) : "-"}</td>
+                        <td className="py-2.5 text-right text-[#6b6c80]">{row.plays > 0 ? fmt(row.plays) : "-"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -603,15 +603,15 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                 <SectionTitle>콘텐츠 유형 — 평균 반응 vs 게시물 수</SectionTitle>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={byType} barSize={32}>
-                    <XAxis dataKey="type" stroke="#454659" tick={{ fill: "#a8a8ba", fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis yAxisId="left" stroke="#454659" tick={{ fill: "#9494a8", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
-                    <YAxis yAxisId="right" orientation="right" stroke="#454659" tick={{ fill: "#9494a8", fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} />
-                    <Legend wrapperStyle={{ fontSize: 11, color: "#a8a8ba" }} />
+                    <XAxis dataKey="type" stroke="#c5c8d6" tick={{ fill: "#6b6c80", fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="left" stroke="#c5c8d6" tick={{ fill: "#8a8ba0", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#c5c8d6" tick={{ fill: "#8a8ba0", fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#00000008" }} />
+                    <Legend wrapperStyle={{ fontSize: 11, color: "#6b6c80" }} />
                     <Bar yAxisId="left" dataKey="avgReactions" name="평균 반응" radius={[6,6,0,0]}>
                       {byType.map((e, i) => <Cell key={i} fill={TYPE_COLORS[e.type] ?? "#6366f1"} />)}
                     </Bar>
-                    <Bar yAxisId="right" dataKey="count" name="게시물 수" fill="#34354a" radius={[6,6,0,0]} />
+                    <Bar yAxisId="right" dataKey="count" name="게시물 수" fill="#c5c8d6" radius={[6,6,0,0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </Card>
@@ -621,15 +621,15 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                 <SectionTitle>해시태그 개수 — 반응에 영향을 미칠까?</SectionTitle>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={hashtagImpact} barSize={40}>
-                    <XAxis dataKey="bucket" stroke="#454659" tick={{ fill: "#a8a8ba", fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis stroke="#454659" tick={{ fill: "#9494a8", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }}
+                    <XAxis dataKey="bucket" stroke="#c5c8d6" tick={{ fill: "#6b6c80", fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <YAxis stroke="#c5c8d6" tick={{ fill: "#8a8ba0", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#00000008" }}
                       formatter={(v: number, name: string) => [name === "avg" ? fmt(v) : v, name === "avg" ? "평균 반응" : "게시물 수"]} />
                     <Bar dataKey="avg" name="avg" fill="#f59e0b" radius={[8,8,0,0]}
-                      label={{ position: "top", fill: "#a8a8ba", fontSize: 10, formatter: (v: number) => fmt(v) }} />
+                      label={{ position: "top", fill: "#6b6c80", fontSize: 10, formatter: (v: number) => fmt(v) }} />
                   </BarChart>
                 </ResponsiveContainer>
-                <p className="text-[10px] text-[#7d7d92] mt-2 text-center">각 구간 게시물 수: {hashtagImpact.map(h => `${h.bucket} ${h.count}건`).join(" / ")}</p>
+                <p className="text-[10px] text-[#8a8ba0] mt-2 text-center">각 구간 게시물 수: {hashtagImpact.map(h => `${h.bucket} ${h.count}건`).join(" / ")}</p>
               </Card>
             </div>
 
@@ -643,17 +643,17 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                   const color = CHANNEL_COLORS[acc.channel] ?? "#6366f1"
                   return (
                     <div key={i} className="flex items-center gap-3">
-                      <span className="text-[11px] text-[#7d7d92] w-4 text-right flex-shrink-0">{i + 1}</span>
-                      <span className="text-[11px] font-semibold text-[#c8c8d6] w-28 truncate flex-shrink-0">@{acc.owner}</span>
+                      <span className="text-[11px] text-[#8a8ba0] w-4 text-right flex-shrink-0">{i + 1}</span>
+                      <span className="text-[11px] font-semibold text-[#4b4c60] w-28 truncate flex-shrink-0">@{acc.owner}</span>
                       <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0"
                         style={{ background: color + "22", color }}>
                         {CHANNEL_LABELS[acc.channel] ?? acc.channel}
                       </span>
-                      <div className="flex-1 h-2 bg-[#23242f] rounded-full overflow-hidden">
+                      <div className="flex-1 h-2 bg-[#eef0f5] rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all" style={{ width: `${barPct}%`, background: color }} />
                       </div>
-                      <span className="text-[11px] text-[#a8a8ba] w-14 text-right flex-shrink-0">{fmt(acc.reactions)}</span>
-                      <span className="text-[10px] text-[#7d7d92] w-10 text-right flex-shrink-0">{acc.count}건</span>
+                      <span className="text-[11px] text-[#6b6c80] w-14 text-right flex-shrink-0">{fmt(acc.reactions)}</span>
+                      <span className="text-[10px] text-[#8a8ba0] w-10 text-right flex-shrink-0">{acc.count}건</span>
                     </div>
                   )
                 })}
@@ -665,9 +665,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
               <SectionTitle>인기 해시태그 TOP 12</SectionTitle>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={byHashtag} layout="vertical" barSize={14}>
-                  <XAxis type="number" stroke="#454659" tick={{ fill: "#9494a8", fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="tag" stroke="#454659" tick={{ fill: "#b6b6c6", fontSize: 10 }} axisLine={false} tickLine={false} width={120} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} />
+                  <XAxis type="number" stroke="#c5c8d6" tick={{ fill: "#8a8ba0", fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="tag" stroke="#c5c8d6" tick={{ fill: "#6b6c80", fontSize: 10 }} axisLine={false} tickLine={false} width={120} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#00000008" }} />
                   <Bar dataKey="count" name="게시물수" fill="#6366f1" radius={[0,6,6,0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -705,35 +705,35 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                     {[
-                      { label: cmp.prevName, data: prev, color: "#9d9dae" },
+                      { label: cmp.prevName, data: prev, color: "#8a8ba0" },
                       { label: cmp.currName, data: curr, color: getCampaignColor(cmp.currName) },
                     ].map(({ label, data, color }) => (
-                      <div key={label} className="rounded-xl border border-[#34354a] p-4" style={{ background: "#1b1c2660" }}>
+                      <div key={label} className="rounded-xl border border-[#dcdfeb] p-4" style={{ background: "#f4f5f9" }}>
                         <div className="flex items-center justify-between mb-3">
                           <span className="text-xs font-bold" style={{ color }}>{getCampaignLabel(label)}</span>
-                          <span className="text-[10px] text-[#9494a8]">{data.minDate} ~ {data.maxDate}</span>
+                          <span className="text-[10px] text-[#8a8ba0]">{data.minDate} ~ {data.maxDate}</span>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <p className="text-[10px] text-[#7d7d92] mb-0.5">게시물 수</p>
-                            <p className="text-lg font-bold text-[#f0f0f6]">{data.count}건</p>
+                            <p className="text-[10px] text-[#8a8ba0] mb-0.5">게시물 수</p>
+                            <p className="text-lg font-bold text-[#1a1b26]">{data.count}건</p>
                           </div>
                           <div>
-                            <p className="text-[10px] text-[#7d7d92] mb-0.5">게시물당 반응</p>
-                            <p className="text-lg font-bold text-[#f0f0f6]">{fmt(data.avgReactions)}</p>
+                            <p className="text-[10px] text-[#8a8ba0] mb-0.5">게시물당 반응</p>
+                            <p className="text-lg font-bold text-[#1a1b26]">{fmt(data.avgReactions)}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] text-[#7d7d92] mb-0.5">총 좋아요</p>
-                            <p className="text-sm font-semibold text-[#c8c8d6]">{fmt(data.likes)}</p>
+                            <p className="text-[10px] text-[#8a8ba0] mb-0.5">총 좋아요</p>
+                            <p className="text-sm font-semibold text-[#4b4c60]">{fmt(data.likes)}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] text-[#7d7d92] mb-0.5">총 댓글</p>
-                            <p className="text-sm font-semibold text-[#c8c8d6]">{fmt(data.comments)}</p>
+                            <p className="text-[10px] text-[#8a8ba0] mb-0.5">총 댓글</p>
+                            <p className="text-sm font-semibold text-[#4b4c60]">{fmt(data.comments)}</p>
                           </div>
                           {data.plays > 0 && (
                             <div className="col-span-2">
-                              <p className="text-[10px] text-[#7d7d92] mb-0.5">총 재생 (TikTok/YouTube)</p>
-                              <p className="text-sm font-semibold text-[#c8c8d6]">{fmt(data.plays)}</p>
+                              <p className="text-[10px] text-[#8a8ba0] mb-0.5">총 재생 (TikTok/YouTube)</p>
+                              <p className="text-sm font-semibold text-[#4b4c60]">{fmt(data.plays)}</p>
                             </div>
                           )}
                         </div>
@@ -743,17 +743,17 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
 
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={chartData} barSize={28}>
-                      <XAxis dataKey="metric" stroke="#454659" tick={{ fill: "#a8a8ba", fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis stroke="#454659" tick={{ fill: "#9494a8", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
-                      <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} formatter={(v: number) => fmt(v)} />
-                      <Legend wrapperStyle={{ fontSize: 11, color: "#a8a8ba" }} />
+                      <XAxis dataKey="metric" stroke="#c5c8d6" tick={{ fill: "#6b6c80", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis stroke="#c5c8d6" tick={{ fill: "#8a8ba0", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#00000008" }} formatter={(v: number) => fmt(v)} />
+                      <Legend wrapperStyle={{ fontSize: 11, color: "#6b6c80" }} />
                       <Bar dataKey="이전" name="이전 콜라보" fill="#6b7280" radius={[6,6,0,0]} />
                       <Bar dataKey="이번" name="이번 콜라보" fill={getCampaignColor(cmp.currName)} radius={[6,6,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
 
                   {countChange !== null && (
-                    <p className="text-[11px] text-[#9494a8] mt-2 text-center">
+                    <p className="text-[11px] text-[#8a8ba0] mt-2 text-center">
                       게시물 수 {countChange >= 0 ? "+" : ""}{countChange}% · 총 반응 {prev.reactions > 0 ? `${Math.round((curr.reactions - prev.reactions) / prev.reactions * 100)}%` : "-"} 변화
                     </p>
                   )}
@@ -772,12 +772,12 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
               <SectionTitle>일별 게시물 수 추이</SectionTitle>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={byDate}>
-                  <XAxis dataKey="date" stroke="#454659" tick={{ fill: "#a8a8ba", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis stroke="#454659" tick={{ fill: "#9494a8", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="date" stroke="#c5c8d6" tick={{ fill: "#6b6c80", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis stroke="#c5c8d6" tick={{ fill: "#8a8ba0", fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: "#6366f1", strokeWidth: 1, strokeDasharray: "4 2" }} />
                   <Line type="monotone" dataKey="count" name="게시물수" stroke="#6366f1" strokeWidth={2.5}
                     dot={{ fill: "#6366f1", r: 3, strokeWidth: 0 }}
-                    activeDot={{ r: 5, fill: "#818cf8", strokeWidth: 0 }} />
+                    activeDot={{ r: 5, fill: "#4f46e5", strokeWidth: 0 }} />
                 </LineChart>
               </ResponsiveContainer>
             </Card>
@@ -796,9 +796,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                   })
                   return days.map(d => ({ day: d, count: map[d] }))
                 })()}>
-                  <XAxis dataKey="day" stroke="#454659" tick={{ fill: "#a8a8ba", fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis stroke="#454659" tick={{ fill: "#9494a8", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} />
+                  <XAxis dataKey="day" stroke="#c5c8d6" tick={{ fill: "#6b6c80", fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis stroke="#c5c8d6" tick={{ fill: "#8a8ba0", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#00000008" }} />
                   <Bar dataKey="count" name="게시물" fill="#f97316" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -813,25 +813,25 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
           <div>
             {/* 정렬 옵션 */}
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-[11px] text-[#9494a8]">정렬:</span>
+              <span className="text-[11px] text-[#8a8ba0]">정렬:</span>
               {(["reactions", "plays", "comments"] as const).map(s => (
                 <button key={s} onClick={() => setSortBy(s)}
                   className="px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
                   style={{
                     background: sortBy === s ? "#6366f122" : "transparent",
-                    border: `1px solid ${sortBy === s ? "#6366f1" : "#34354a"}`,
-                    color: sortBy === s ? "#818cf8" : "#9494a8",
+                    border: `1px solid ${sortBy === s ? "#6366f1" : "#dcdfeb"}`,
+                    color: sortBy === s ? "#4f46e5" : "#8a8ba0",
                   }}>
                   {s === "reactions" ? "🔥 반응 순" : s === "plays" ? "▶ 재생 순" : "💬 댓글 순"}
                 </button>
               ))}
-              <span className="ml-auto text-[11px] text-[#7d7d92]">
+              <span className="ml-auto text-[11px] text-[#8a8ba0]">
                 {showAllPosts ? `전체 ${sortedPosts.length}건` : `상위 20건 (전체 ${sortedPosts.length}건)`}
               </span>
               {sortedPosts.length > 20 && (
                 <button onClick={() => setShowAllPosts(v => !v)}
                   className="px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
-                  style={{ border: "1px solid #34354a", color: "#818cf8" }}>
+                  style={{ border: "1px solid #dcdfeb", color: "#4f46e5" }}>
                   {showAllPosts ? "상위 20건만 보기" : "전체 보기"}
                 </button>
               )}
@@ -840,11 +840,11 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {topPosts.map((p, i) => (
                 <a key={i} href={p.url || "#"} target="_blank" rel="noopener noreferrer"
-                  className="group block rounded-2xl overflow-hidden border border-[#34354a] hover:border-[#6366f1] transition-all hover:shadow-lg hover:shadow-[#6366f120]"
-                  style={{ background: "#1b1c26" }}>
+                  className="group block rounded-2xl overflow-hidden border border-[#dcdfeb] hover:border-[#6366f1] transition-all hover:shadow-lg hover:shadow-[#6366f120]"
+                  style={{ background: "#ffffff" }}>
 
                   {/* 썸네일 */}
-                  <div className="relative aspect-square bg-[#23242f] overflow-hidden">
+                  <div className="relative aspect-square bg-[#eef0f5] overflow-hidden">
                     {p.displayUrl ? (
                       <img src={p.displayUrl} alt="" loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
@@ -852,8 +852,8 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                     ) : null}
                     {/* 이미지 없을 때 캡션 미리보기 */}
                     <div className={`w-full h-full p-3 flex flex-col items-center justify-center text-center gap-2 ${p.displayUrl ? "hidden" : ""}`}>
-                      <span className="text-2xl text-[#454659]">{p.isVideo ? "▶" : "🖼"}</span>
-                      <p className="text-[10px] text-[#a8a8ba] leading-relaxed line-clamp-5 break-words">
+                      <span className="text-2xl text-[#c5c8d6]">{p.isVideo ? "▶" : "🖼"}</span>
+                      <p className="text-[10px] text-[#6b6c80] leading-relaxed line-clamp-5 break-words">
                         {p.caption ? p.caption.slice(0, 90) : "내용 없음"}
                       </p>
                     </div>
@@ -892,8 +892,8 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
 
                   {/* 정보 */}
                   <div className="p-3">
-                    <p className="text-[11px] font-semibold text-[#e0e0e8] truncate">@{p.owner}</p>
-                    <p className="text-[10px] text-[#9494a8] line-clamp-2 mt-0.5 leading-relaxed">
+                    <p className="text-[11px] font-semibold text-[#2c2d3d] truncate">@{p.owner}</p>
+                    <p className="text-[10px] text-[#8a8ba0] line-clamp-2 mt-0.5 leading-relaxed">
                       {p.caption.slice(0, 60)}
                     </p>
                     <div className="flex gap-1 mt-1.5 flex-wrap">
@@ -901,11 +901,11 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                         <span key={j} className="text-[9px] text-[#6366f1] truncate max-w-[80px]">{h}</span>
                       ))}
                     </div>
-                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-[#23242f]">
-                      <span className="text-[10px] text-[#a8a8ba]">
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-[#eef0f5]">
+                      <span className="text-[10px] text-[#6b6c80]">
                         {p.channel === "TikTok" || p.channel === "YouTube" ? `▶ ${fmt(p.plays)}` : `💬 ${p.comments}`}
                       </span>
-                      <span className="text-[10px] text-[#7d7d92]">{p.date.slice(5)}</span>
+                      <span className="text-[10px] text-[#8a8ba0]">{p.date.slice(5)}</span>
                     </div>
                   </div>
                 </a>
@@ -923,13 +923,13 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
             {/* 감성 분포 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {sentimentDist.map(({ s, count, pct }) => (
-                <div key={s} className="bg-[#1b1c26] border border-[#34354a] rounded-2xl p-5 relative overflow-hidden">
+                <div key={s} className="bg-[#ffffff] border border-[#dcdfeb] rounded-2xl p-5 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1 h-full rounded-l-2xl" style={{ background: SENTIMENT_COLORS[s] }} />
                   <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color: SENTIMENT_COLORS[s] }}>{s}</p>
-                  <p className="text-3xl font-bold text-[#f0f0f6]">{pct}%</p>
-                  <p className="text-[11px] text-[#9494a8] mt-1">{count}건</p>
+                  <p className="text-3xl font-bold text-[#1a1b26]">{pct}%</p>
+                  <p className="text-[11px] text-[#8a8ba0] mt-1">{count}건</p>
                   {/* 바 */}
-                  <div className="mt-3 h-1 rounded-full bg-[#34354a] overflow-hidden">
+                  <div className="mt-3 h-1 rounded-full bg-[#dcdfeb] overflow-hidden">
                     <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: SENTIMENT_COLORS[s] }} />
                   </div>
                 </div>
@@ -942,7 +942,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
               <Card>
                 <SectionTitle>반응 키워드 TOP 20</SectionTitle>
                 {topKeywords.length === 0 ? (
-                  <p className="text-[#7d7d92] text-sm">키워드 데이터 없음</p>
+                  <p className="text-[#8a8ba0] text-sm">키워드 데이터 없음</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {topKeywords.map(({ kw, count }, i) => {
@@ -969,9 +969,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                 <SectionTitle>감성 분포 (게시물 수)</SectionTitle>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={sentimentDist} barSize={48}>
-                    <XAxis dataKey="s" stroke="#454659" tick={{ fill: "#b0b0c0", fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis stroke="#454659" tick={{ fill: "#9494a8", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} />
+                    <XAxis dataKey="s" stroke="#c5c8d6" tick={{ fill: "#6b6c80", fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <YAxis stroke="#c5c8d6" tick={{ fill: "#8a8ba0", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#00000008" }} />
                     <Bar dataKey="count" name="게시물수" radius={[8,8,0,0]}>
                       {sentimentDist.map((e, i) => <Cell key={i} fill={SENTIMENT_COLORS[e.s]} />)}
                     </Bar>
@@ -998,9 +998,9 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                     </div>
                     <ResponsiveContainer width="100%" height={220}>
                       <BarChart data={cmp.chartData} barSize={28}>
-                        <XAxis dataKey="s" stroke="#454659" tick={{ fill: "#b0b0c0", fontSize: 12 }} axisLine={false} tickLine={false} />
-                        <YAxis stroke="#454659" tick={{ fill: "#9494a8", fontSize: 11 }} axisLine={false} tickLine={false} unit="%" />
-                        <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#ffffff08" }} formatter={(v: number) => `${v}%`} />
+                        <XAxis dataKey="s" stroke="#c5c8d6" tick={{ fill: "#6b6c80", fontSize: 12 }} axisLine={false} tickLine={false} />
+                        <YAxis stroke="#c5c8d6" tick={{ fill: "#8a8ba0", fontSize: 11 }} axisLine={false} tickLine={false} unit="%" />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "#00000008" }} formatter={(v: number) => `${v}%`} />
                         <Bar dataKey="이전" name={getCampaignLabel(cmp.prevName)} fill="#6b7280" radius={[6,6,0,0]} />
                         <Bar dataKey="이번" name={getCampaignLabel(cmp.currName)} fill={getCampaignColor(cmp.currName)} radius={[6,6,0,0]} />
                       </BarChart>
@@ -1012,7 +1012,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                     <div>
                       <p className="text-[10px] font-bold text-[#9ca3af] mb-2">{getCampaignLabel(cmp.prevName)} 키워드</p>
                       {cmp.prevKeywords.length === 0 ? (
-                        <p className="text-[#7d7d92] text-xs">키워드 없음</p>
+                        <p className="text-[#8a8ba0] text-xs">키워드 없음</p>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
                           {cmp.prevKeywords.map(({ kw, count }, j) => (
@@ -1027,7 +1027,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                     <div>
                       <p className="text-[10px] font-bold mb-2" style={{ color: getCampaignColor(cmp.currName) }}>{getCampaignLabel(cmp.currName)} 키워드</p>
                       {cmp.currKeywords.length === 0 ? (
-                        <p className="text-[#7d7d92] text-xs">키워드 없음</p>
+                        <p className="text-[#8a8ba0] text-xs">키워드 없음</p>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
                           {cmp.currKeywords.map(({ kw, count }, j) => (
@@ -1048,36 +1048,36 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
             <Card>
               <div className="flex items-center justify-between mb-4">
                 <SectionTitle>실제 댓글 반응 미리보기 ({postsWithComments.length}건)</SectionTitle>
-                <span className="text-[10px] text-[#7d7d92] bg-[#23242f] px-2 py-1 rounded-lg">📸 Instagram 전체 기준</span>
+                <span className="text-[10px] text-[#8a8ba0] bg-[#eef0f5] px-2 py-1 rounded-lg">📸 Instagram 전체 기준</span>
               </div>
               {postsWithComments.length === 0 ? (
-                <p className="text-[#7d7d92] text-sm">댓글 데이터가 없습니다.<br/>Instagram Apify 액터에서 <code className="text-[#6366f1]">firstComment</code> 필드가 수집되고 있는지 확인하세요.</p>
+                <p className="text-[#8a8ba0] text-sm">댓글 데이터가 없습니다.<br/>Instagram Apify 액터에서 <code className="text-[#6366f1]">firstComment</code> 필드가 수집되고 있는지 확인하세요.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
                   {postsWithComments.map((p, i) => (
                     <a key={i} href={p.url || "#"} target="_blank" rel="noopener noreferrer"
-                      className="flex gap-3 p-3 rounded-xl border border-[#34354a] hover:border-[#6366f1] transition-colors bg-[#0e0f16]">
+                      className="flex gap-3 p-3 rounded-xl border border-[#dcdfeb] hover:border-[#6366f1] transition-colors bg-[#f4f5f9]">
                       {/* 썸네일 */}
-                      <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-[#23242f]">
+                      <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-[#eef0f5]">
                         {p.displayUrl ? (
                           <img src={p.displayUrl} alt="" className="w-full h-full object-cover"
                             onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xl text-[#454659]">🖼</div>
+                          <div className="w-full h-full flex items-center justify-center text-xl text-[#c5c8d6]">🖼</div>
                         )}
                       </div>
                       {/* 텍스트 */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[11px] font-semibold text-[#c8c8d6]">@{p.owner}</span>
+                          <span className="text-[11px] font-semibold text-[#4b4c60]">@{p.owner}</span>
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
                             style={{ background: SENTIMENT_COLORS[p.sentiment] + "22", color: SENTIMENT_COLORS[p.sentiment] }}>
                             {p.sentiment}
                           </span>
-                          <span className="text-[10px] text-[#7d7d92] ml-auto">{p.date.slice(5)}</span>
+                          <span className="text-[10px] text-[#8a8ba0] ml-auto">{p.date.slice(5)}</span>
                         </div>
                         {/* 첫 댓글 (한국어 번역) */}
-                        <p className="text-xs text-[#e0e0e8] leading-relaxed line-clamp-2">
+                        <p className="text-xs text-[#2c2d3d] leading-relaxed line-clamp-2">
                           💬 {p.translatedComment || p.firstComment}
                         </p>
                         {/* 감성 키워드 */}
@@ -1092,7 +1092,7 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                           </div>
                         )}
                         {/* 좋아요 */}
-                        <p className="text-[10px] text-[#7d7d92] mt-1">❤️ {p.likes.toLocaleString()}</p>
+                        <p className="text-[10px] text-[#8a8ba0] mt-1">❤️ {p.likes.toLocaleString()}</p>
                       </div>
                     </a>
                   ))}
@@ -1107,22 +1107,22 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
         ══════════════════════════════════════════════════════════════════ */}
         {tab === "raw" && (
           <Card className="p-0 overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#34354a] flex items-center justify-between">
+            <div className="px-5 py-4 border-b border-[#dcdfeb] flex items-center justify-between">
               <SectionTitle>원본 데이터 ({fp.length}건)</SectionTitle>
             </div>
             <div className="overflow-auto max-h-[600px]">
               <table className="w-full text-xs">
-                <thead className="sticky top-0" style={{ background: "#1b1c26" }}>
-                  <tr className="border-b border-[#34354a]">
+                <thead className="sticky top-0" style={{ background: "#ffffff" }}>
+                  <tr className="border-b border-[#dcdfeb]">
                     {["날짜", "채널", "캠페인", "계정", "유형", "재생", "좋아요", "댓글", "링크"].map(h => (
-                      <th key={h} className={`px-4 py-3 text-[10px] font-bold tracking-widest text-[#7d7d92] uppercase whitespace-nowrap ${h === "댓글" || h === "링크" ? "text-center" : "text-left"}`}>{h}</th>
+                      <th key={h} className={`px-4 py-3 text-[10px] font-bold tracking-widest text-[#8a8ba0] uppercase whitespace-nowrap ${h === "댓글" || h === "링크" ? "text-center" : "text-left"}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {fp.slice(0, 300).map((p, i) => (
-                    <tr key={i} className="border-b border-[#23242f] hover:bg-[#ffffff03] transition-colors">
-                      <td className="px-4 py-2.5 text-[#a8a8ba] whitespace-nowrap">{p.date}</td>
+                    <tr key={i} className="border-b border-[#eef0f5] hover:bg-[#00000005] transition-colors">
+                      <td className="px-4 py-2.5 text-[#6b6c80] whitespace-nowrap">{p.date}</td>
                       <td className="px-4 py-2.5">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold"
                           style={{ background: CHANNEL_COLORS[p.channel] + "22", color: CHANNEL_COLORS[p.channel] }}>
@@ -1135,16 +1135,16 @@ export default function Dashboard({ posts, allPosts, fetchedAt }: { posts: Post[
                           {getCampaignLabel(p.ipName)}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 text-[#c8c8d6] font-medium">@{p.owner}</td>
+                      <td className="px-4 py-2.5 text-[#4b4c60] font-medium">@{p.owner}</td>
                       <td className="px-4 py-2.5">
                         <span className="px-1.5 py-0.5 rounded text-[10px]"
-                          style={{ background: (TYPE_COLORS[p.contentType] ?? "#6b7280") + "22", color: TYPE_COLORS[p.contentType] ?? "#b6b6c6" }}>
+                          style={{ background: (TYPE_COLORS[p.contentType] ?? "#6b7280") + "22", color: TYPE_COLORS[p.contentType] ?? "#6b6c80" }}>
                           {p.contentType}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 text-center text-[#b6b6c6]">{p.plays > 0 ? fmt(p.plays) : "-"}</td>
-                      <td className="px-4 py-2.5 text-center text-[#b6b6c6]">{p.likes > 0 ? fmt(p.likes) : "-"}</td>
-                      <td className="px-4 py-2.5 text-center text-[#b6b6c6]">{p.comments > 0 ? p.comments : "-"}</td>
+                      <td className="px-4 py-2.5 text-center text-[#6b6c80]">{p.plays > 0 ? fmt(p.plays) : "-"}</td>
+                      <td className="px-4 py-2.5 text-center text-[#6b6c80]">{p.likes > 0 ? fmt(p.likes) : "-"}</td>
+                      <td className="px-4 py-2.5 text-center text-[#6b6c80]">{p.comments > 0 ? p.comments : "-"}</td>
                       <td className="px-4 py-2.5 text-center">
                         {p.url && (
                           <a href={p.url} target="_blank" rel="noopener noreferrer"
